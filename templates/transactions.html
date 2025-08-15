@@ -10,6 +10,7 @@
             padding: 0;
             display: flex;
             background-color: #f5f5f5;
+            min-height: 100vh;
         }
         .sidebar {
             width: 200px;
@@ -18,6 +19,8 @@
             padding: 20px 0;
             position: fixed;
             height: 100%;
+            top: 0;
+            left: 0;
         }
         .sidebar a {
             display: block;
@@ -33,6 +36,7 @@
             margin-left: 220px;
             padding: 20px;
             flex-grow: 1;
+            width: calc(100% - 220px);
         }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
@@ -56,6 +60,25 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+         <form method="POST" action="{{ url_for('admin_add_transaction') }}">
+            <label for="member_name">نام عضو:</label>
+            <input type="text" id="member_name" name="member_name" required>
+            <label for="trans_type">نوع تراکنش:</label>
+            <select id="trans_type" name="trans_type" required>
+                <option value="initial">سرمایه اولیه</option>
+                <option value="membership">عضویت ماهانه</option>
+                <option value="installment">قسط وام</option>
+            </select>
+            <label for="amount">مبلغ (تومان):</label>
+            <input type="number" id="amount" name="amount" required>
+            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
+            <input type="text" id="date" name="date" required>
+            <label for="description">توضیحات:</label>
+            <input type="text" id="description" name="description">
+            <label for="tracking_code">کد رهگیری:</label>
+            <input type="number" id="tracking_code" name="tracking_code" required>
+            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
+        </form>
         <table>
             <thead>
                 <tr>
@@ -92,25 +115,7 @@
             <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
             <p>جمع کل: {{ total | format_number }} تومان</p>
         </div>
-        <form method="POST" action="{{ url_for('admin_add_transaction') }}">
-            <label for="member_name">نام عضو:</label>
-            <input type="text" id="member_name" name="member_name" required>
-            <label for="trans_type">نوع تراکنش:</label>
-            <select id="trans_type" name="trans_type" required>
-                <option value="initial">سرمایه اولیه</option>
-                <option value="membership">عضویت ماهانه</option>
-                <option value="installment">قسط وام</option>
-            </select>
-            <label for="amount">مبلغ (تومان):</label>
-            <input type="number" id="amount" name="amount" required>
-            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
-            <input type="text" id="date" name="date" required>
-            <label for="description">توضیحات:</label>
-            <input type="text" id="description" name="description">
-            <label for="tracking_code">کد رهگیری:</label>
-            <input type="number" id="tracking_code" name="tracking_code" required>
-            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
-        </form>
+       
         <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
     </div>
 </body>
