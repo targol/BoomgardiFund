@@ -46,29 +46,7 @@
             </form>
             <a href="/members" class="button">لیست کاربران</a>
             <a href="/transactions" class="button">لیست تراکنش‌ها</a>
-            <h2>لیست اعضا</h2>
-            <table id="membersTable">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">نام</th>
-                        <th onclick="sortTable(1)">تاریخ عضویت</th>
-                        <th onclick="sortTable(2)">سرمایه اولیه</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member in members %}
-                        <tr>
-                            <td>{{ member.name }}</td>
-                            <td>{{ member.join_date }}</td>
-                            <td>{{ member.initial_capital }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="pagination">
-                <a href="#" onclick="showPage(1)">1</a>
-                <a href="#" onclick="showPage(2)">2</a>
-            </div>
+            
             <script>
                 function sortTable(n) {
                     var table = document.getElementById("membersTable");
@@ -149,3 +127,4 @@
     </footer>
 </body>
 </html>
+
