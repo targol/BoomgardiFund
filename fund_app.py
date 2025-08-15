@@ -107,15 +107,22 @@ def get_all_transactions():
     conn.close()
     return rows
 
-# تبدیل تاریخ شمسی به میلادی
-def shamsi_to_gregorian(shamsi_date):
-    year, month, day = map(int, shamsi_date.split('-'))
-    jd = jdate(year, month, day)
-    return jd.togregorian().strftime("%Y-%m-%d")
+# تبدیل تاریخ میلادی به شمسی
+def gregorian_to_shamsi(date_str):
+    if date_str:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        jd = jdate.fromgregorian(date=dt)
+        return jd.strftime("%Y-%m-%d")
+    return ""
+
+# تبدیل اعداد به فرمت هزارتایی
+def format_number(number):
+    return "{:,.0f}".format(number).replace(",", ".")
 
 # اپ Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = secrets.token_hex(16)
+app.jinja_env.filters['format_number'] = format_number
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -142,7 +149,7 @@ def status():
         current_date = datetime.now().strftime("%Y-%m-%d")
         points = member.calculate_points(current_date)
         fund_balance = sum(m.current_balance for m in Member.load_all())
-        return render_template('status.html', name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
+        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(points), fund_balance=format_number(fund_balance))
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -209,7 +216,11 @@ def transactions():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     transactions = get_all_transactions()
-    return render_template('transactions.html', transactions=transactions)
+    # محاسبه جمع کل سرمایه اولیه و عضویت‌های ماهانه
+    initial_total = sum(t[3] for t in transactions if t[4] == 'initial')
+    membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
+    total = initial_total + membership_total
+    return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total)
 
 @app.route('/members')
 def members():
