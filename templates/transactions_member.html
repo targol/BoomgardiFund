@@ -4,42 +4,71 @@
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #4A704A;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .sidebar a {
+            display: block;
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .sidebar a:hover {
+            background-color: #3D5C3D;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+            flex-grow: 1;
+            width: calc(100% - 220px);
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
-        .search { margin-bottom: 10px; }
-        .summary { margin-top: 20px; font-weight: bold; }
-        .pagination { margin-top: 10px; }
-        .pagination a { margin: 0 5px; text-decoration: none; color: #4CAF50; }
-        .pagination a.active { font-weight: bold; color: #000; }
+        .summary { margin-top: 20px; font-weight: bold; color: #333; }
+        .button { margin-top: 10px; padding: 5px 10px; }
+        .pagination { margin-top: 10px; text-align: center; }
+        .pagination a { margin: 0 5px; text-decoration: none; color: #4A704A; }
+        .pagination a.active { font-weight: bold; }
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
+    <div class="sidebar">
+        <a href="{{ url_for('user_home', member_name=member_name) }}">خانه</a>
+        <a href="{{ url_for('user_details', member_name=member_name) }}">جزییات تراکنش</a>
+        <a href="{{ url_for('logout') }}">خروج</a>
+    </div>
+    <div class="content">
         <h1>تراکنش‌های {{ member_name }}</h1>
-        <div class="search">
-            <input type="text" id="searchId" placeholder="جستجوی شناسه" onkeyup="searchTable(0)">
-            <input type="text" id="searchDate" placeholder="جستجوی تاریخ" onkeyup="searchTable(1)">
-            <input type="text" id="searchAmount" placeholder="جستجوی مبلغ" onkeyup="searchTable(2)">
-            <input type="text" id="searchType" placeholder="جستجوی نوع واریز" onkeyup="searchTable(3)">
-            <input type="text" id="searchDesc" placeholder="جستجوی توضیح" onkeyup="searchTable(4)">
-            <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری" onkeyup="searchTable(5)">
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
         </div>
         <table id="transactionsTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">شناسه</th>
-                    <th onclick="sortTable(1)">تاریخ واریز (شمسی)</th>
-                    <th onclick="sortTable(2)">مبلغ واریز (تومان)</th>
-                    <th onclick="sortTable(3)">نوع واریز</th>
-                    <th onclick="sortTable(4)">توضیح</th>
-                    <th onclick="sortTable(5)">کد رهگیری</th>
+                    <th>شناسه</th>
+                    <th>تاریخ واریز (شمسی)</th>
+                    <th>مبلغ واریز (تومان)</th>
+                    <th>نوع واریز</th>
+                    <th>توضیح</th>
+                    <th>کد رهگیری</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,84 +77,19 @@
                         <td>{{ trans[0] }}</td>
                         <td>{{ trans[1] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[2] | format_number }}</td>
-                        <td>
-                            {% if trans[3] == 'initial' %}سرمایه اولیه
-                            {% elif trans[3] == 'membership' %}عضویت ماهانه
-                            {% elif trans[3] == 'installment' %}قسط وام
-                            {% endif %}
-                        </td>
+                        <td>{{ trans[3] }}</td>
                         <td>{{ trans[4] }}</td>
                         <td>{{ trans[5] }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
-        <div class="summary">
-            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
-            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
-            <p>جمع کل: {{ total | format_number }} تومان</p>
-        </div>
         <div class="pagination" id="pagination"></div>
         <script>
-            function sortTable(n) {
-                var table = document.getElementById("transactionsTable");
-                var rows, switching, i, x, y, shouldSwitch, dir = "asc";
-                switching = true;
-                while (switching) {
-                    switching = false;
-                    rows = table.rows;
-                    for (i = 1; i < (rows.length - 1); i++) {
-                        shouldSwitch = false;
-                        x = rows[i].getElementsByTagName("TD")[n];
-                        y = rows[i + 1].getElementsByTagName("TD")[n];
-                        if (dir == "asc") {
-                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir == "desc") {
-                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (shouldSwitch) {
-                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                        switching = true;
-                    } else {
-                        if (switchcount == 0 && dir == "asc") {
-                            dir = "desc";
-                            switching = true;
-                        }
-                    }
-                }
-            }
-
-            function searchTable(column) {
-                var input, filter, table, tr, td, i, txtValue;
-                input = [document.getElementById("searchId"), document.getElementById("searchDate"), document.getElementById("searchAmount"), document.getElementById("searchType"), document.getElementById("searchDesc"), document.getElementById("searchCode")];
-                filter = input[column].value.toLowerCase();
-                table = document.getElementById("transactionsTable");
-                tr = table.getElementsByTagName("tr");
-                for (i = 1; i < tr.length; i++) {
-                    td = tr[i].getElementsByTagName("td")[column];
-                    if (td) {
-                        txtValue = td.textContent || td.innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            tr[i].style.display = "";
-                        } else {
-                            tr[i].style.display = "none";
-                        }
-                    }
-                }
-                showPage(1); // به‌روزرسانی صفحه‌بندی بعد از جستجو
-            }
-
             function showPage(page) {
-                var table = document.getElementById("transactionsTable");
-                var rows = table.getElementsByTagName("tr");
-                var totalRows = rows.length - 1; // بدون سرستون
+                var table = document.getElementById('transactionsTable');
+                var rows = table.getElementsByTagName('tr');
+                var totalRows = rows.length - 1; // بدون هدر
                 var totalPages = Math.ceil(totalRows / 10);
                 for (var i = 1; i < rows.length; i++) {
                     rows[i].style.display = "none";
@@ -133,15 +97,13 @@
                 var start = (page - 1) * 10 + 1;
                 var end = Math.min(start + 9, totalRows);
                 for (var i = start; i <= end; i++) {
-                    if (rows[i] && rows[i].style.display !== "none") {
-                        rows[i].style.display = "";
-                    }
+                    rows[i].style.display = "";
                 }
                 updatePagination(page, totalPages);
             }
 
             function updatePagination(currentPage, totalPages) {
-                var pagination = document.getElementById("pagination");
+                var pagination = document.getElementById('pagination');
                 pagination.innerHTML = '';
                 for (var i = 1; i <= totalPages; i++) {
                     var a = document.createElement('a');
@@ -153,17 +115,14 @@
                 }
             }
 
-            // نمایش صفحه اول به‌طور پیش‌فرض
             window.onload = function() {
-                var rows = document.getElementById("transactionsTable").rows;
+                var rows = document.getElementById('transactionsTable').getElementsByTagName('tr');
                 var totalPages = Math.ceil((rows.length - 1) / 10);
                 showPage(1);
             };
         </script>
-        <a href="/admin">بازگشت به پنل ادمین</a>
+        <a href="{{ url_for('admin') }}" class="button">بازگشت به پنل ادمین</a>
+        <a href="{{ url_for('members') }}" class="button">بازگشت به لیست اعضا</a>
     </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
 </body>
 </html>
