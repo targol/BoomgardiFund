@@ -23,23 +23,21 @@
         <table id="transactionsTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">شناسه</th>
-                    <th onclick="sortTable(1)">نام</th>
-                    <th onclick="sortTable(2)">تاریخ (شمسی)</th>
-                    <th onclick="sortTable(3)">مبلغ (تومان)</th>
-                    <th onclick="sortTable(4)">نوع</th>
-                    <th onclick="sortTable(5)">توضیح</th>
+                    <th onclick="sortTable(0)">نام</th>
+                    <th onclick="sortTable(1)">مبلغ واریز (تومان)</th>
+                    <th onclick="sortTable(2)">نوع واریز</th>
+                    <th onclick="sortTable(3)">تاریخ واریز (شمسی)</th>
+                    <th onclick="sortTable(4)">کد رهگیری</th>
                 </tr>
             </thead>
             <tbody>
                 {% for trans in transactions %}
                     <tr>
-                        <td>{{ trans[0] }}</td>
                         <td>{{ trans[1] }}</td>
-                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[3] | format_number }}</td>
                         <td>{{ trans[4] }}</td>
-                        <td>{{ trans[5] }}</td>
+                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
+                        <td>{{ trans[6] }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
