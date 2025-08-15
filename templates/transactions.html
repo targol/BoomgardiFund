@@ -134,4 +134,80 @@
                     <option value="{{ name }}">{{ name }}</option>
                 {% endfor %}
             </select>
-            <label for="trans_type">نوع تراکنش:</
+            <label for="trans_type">نوع تراکنش:</label>
+            <select id="trans_type" name="trans_type" required>
+                <option value="initial">سرمایه اولیه</option>
+                <option value="membership">عضویت ماهانه</option>
+                <option value="installment">قسط وام</option>
+            </select>
+            <label for="amount">مبلغ (تومان):</label>
+            <input type="number" id="amount" name="amount" required>
+            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
+            <input type="text" id="date" name="date" required>
+            <label for="description">توضیحات:</label>
+            <input type="text" id="description" name="description">
+            <label for="tracking_code">کد رهگیری:</label>
+            <input type="number" id="tracking_code" name="tracking_code" required>
+            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
+        </form>
+        <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
+    </div>
+    <script>
+        // مرتب‌سازی
+        document.querySelectorAll('th').forEach(header => {
+            header.addEventListener('click', () => {
+                const table = document.getElementById('transactionsTable');
+                const headerIndex = Array.from(header.parentElement.children).indexOf(header);
+                const isAscending = header.classList.contains('asc');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                rows.sort((a, b) => {
+                    const aValue = a.cells[headerIndex].textContent.trim();
+                    const bValue = b.cells[headerIndex].textContent.trim();
+                    const numA = isNaN(aValue) ? aValue : parseFloat(aValue.replace(/[^\d.-]/g, ''));
+                    const numB = isNaN(bValue) ? bValue : parseFloat(bValue.replace(/[^\d.-]/g, ''));
+                    return isAscending ? (numA > numB ? 1 : -1) : (numA < numB ? 1 : -1);
+                });
+
+                document.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+                header.classList.add(isAscending ? 'desc' : 'asc');
+
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+
+        // جستجو
+        const searchInputs = {
+            'searchId': 0,
+            'searchName': 1,
+            'searchDate': 2,
+            'searchAmount': 3,
+            'searchType': 4,
+            'searchDesc': 5,
+            'searchCode': 6
+        };
+
+        Object.keys(searchInputs).forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                const table = document.getElementById('transactionsTable');
+                const rows = table.querySelectorAll('tbody tr');
+                const searchValues = {};
+                Object.keys(searchInputs).forEach(key => {
+                    searchValues[searchInputs[key]] = document.getElementById(key).value.toLowerCase();
+                });
+
+                rows.forEach(row => {
+                    let match = true;
+                    row.querySelectorAll('td').forEach((cell, index) => {
+                        if (searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
+                            match = false;
+                        }
+                    });
+                    row.style.display = match ? '' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
