@@ -170,27 +170,39 @@
             <p>جمع کل: {{ total | format_number }} تومان</p>
         </div>
         <form method="POST" action="{{ url_for('admin_add_transaction') }}">
-            <label for="member_name">نام عضو:</label>
-            <select id="member_name" name="member_name" required>
-                {% for name in member_names %}
-                    <option value="{{ name }}">{{ name }}</option>
-                {% endfor %}
-            </select>
-            <label for="trans_type">نوع تراکنش:</label>
-            <select id="trans_type" name="trans_type" required>
-                <option value="initial">سرمایه اولیه</option>
-                <option value="membership">عضویت ماهانه</option>
-                <option value="installment">قسط وام</option>
-            </select>
-            <label for="amount">مبلغ (تومان):</label>
-            <input type="number" id="amount" name="amount" required>
-            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
-            <input type="text" id="date" name="date" required>
-            <label for="description">توضیحات:</label>
-            <input type="text" id="description" name="description">
-            <label for="tracking_code">کد رهگیری:</label>
-            <input type="number" id="tracking_code" name="tracking_code" required>
-            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
+            <div class="mb-3">
+                <label for="member_name" class="form-label">نام عضو:</label>
+                <select id="member_name" name="member_name" class="form-control" required>
+                    {% for name in member_names %}
+                        <option value="{{ name }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="trans_type" class="form-label">نوع تراکنش:</label>
+                <select id="trans_type" name="trans_type" class="form-control" required>
+                    <option value="initial">سرمایه اولیه</option>
+                    <option value="membership">عضویت ماهانه</option>
+                    <option value="installment">قسط وام</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="amount" class="form-label">مبلغ (تومان):</label>
+                <input type="number" id="amount" name="amount" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="date" class="form-label">تاریخ (شمسی - YYYY-MM-DD):</label>
+                <input type="text" id="date" name="date" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">توضیحات:</label>
+                <input type="text" id="description" name="description" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label for="tracking_code" class="form-label">کد رهگیری:</label>
+                <input type="number" id="tracking_code" name="tracking_code" class="form-control" required>
+            </div>
+            <input type="submit" value="اضافه کردن تراکنش جدید" class="btn btn-success">
         </form>
         <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
     </div>
