@@ -9,6 +9,7 @@ from jdatetime import date as jdate
 DB_FILE = os.path.join(os.path.dirname(__file__), 'fund.db')
 
 def init_db():
+    if not os.path.exists(DB_FILE):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     try:
