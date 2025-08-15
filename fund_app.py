@@ -10,25 +10,25 @@ DB_FILE = os.path.join(os.path.dirname(__file__), 'fund.db')
 
 def init_db():
     if not os.path.exists(DB_FILE):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    try:
-        c.execute('''CREATE TABLE IF NOT EXISTS members
-                     (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
-                      initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0, 
-                      username TEXT UNIQUE, password TEXT)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS transactions
-                     (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER UNIQUE,
-                      FOREIGN KEY (member_id) REFERENCES members(id))''')
-        c.execute('''CREATE TABLE IF NOT EXISTS daily_balances
-                     (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, balance INTEGER, daily_points INTEGER, total_points INTEGER,
-                      FOREIGN KEY (member_id) REFERENCES members(id), UNIQUE (member_id, date))''')
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"خطا در ساخت دیتابیس: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        try:
+            c.execute('''CREATE TABLE IF NOT EXISTS members
+                         (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
+                          initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0, 
+                          username TEXT UNIQUE, password TEXT)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS transactions
+                         (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER UNIQUE,
+                          FOREIGN KEY (member_id) REFERENCES members(id))''')
+            c.execute('''CREATE TABLE IF NOT EXISTS daily_balances
+                         (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, balance INTEGER, daily_points INTEGER, total_points INTEGER,
+                          FOREIGN KEY (member_id) REFERENCES members(id), UNIQUE (member_id, date))''')
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"خطا در ساخت دیتابیس: {e}")
+            conn.rollback()
+        finally:
+            conn.close()
 
 init_db()
 
@@ -77,8 +77,15 @@ class Member:
     def save(self):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        c.execute("UPDATE members SET initial_capital=?, current_balance=?, points=?, username=?, password=? WHERE id=?", 
-                  (self.initial_capital, self.current_balance, self.points, self.username, self.password, self.id))
+        c.execute("UPDATE members SET name=?, join_date=?, initial_capital=?, current_balance=?, points=?, username=?, password=? WHERE id=?", 
+                  (self.name, self.join_date, self.initial_capital, self.current_balance, self.points, self.username, self.password, self.id))
+        conn.commit()
+        conn.close()
+
+    def delete(self):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("DELETE FROM members WHERE id=?", (self.id,))
         conn.commit()
         conn.close()
 
@@ -101,7 +108,7 @@ class Member:
                       (self.id, date_str, balance, daily_points, total_points))
             conn.commit()
             self.points = total_points
-            self.current_balance = balance  # به‌روزرسانی موجودی جاری
+            self.current_balance = balance
             self.save()
         except sqlite3.Error as e:
             print(f"خطا در آپدیت تاریخچه: {e}")
@@ -150,6 +157,32 @@ def add_member(name, join_date_gregorian, username, password):
     finally:
         conn.close()
 
+def edit_member(member_id, name, join_date_gregorian, username, password):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("UPDATE members SET name=?, join_date=?, username=?, password=? WHERE id=?", 
+                  (name, join_date_gregorian, username, password, member_id))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        flash('نام یا یوزرنیم تکراری است!', 'error')
+        return False
+    finally:
+        conn.close()
+    return True
+
+def delete_member(member_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("DELETE FROM members WHERE id=?", (member_id,))
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        flash('خطا در حذف عضو!', 'error')
+    finally:
+        conn.close()
+
 def add_transaction(member_id, date_gregorian, amount, trans_type, description, tracking_code):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -160,6 +193,32 @@ def add_transaction(member_id, date_gregorian, amount, trans_type, description, 
     except sqlite3.IntegrityError:
         raise ValueError("کد رهگیری تکراری است!")
     conn.close()
+
+def edit_transaction(transaction_id, member_id, date_gregorian, amount, trans_type, description, tracking_code):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("UPDATE transactions SET member_id=?, date=?, amount=?, type=?, description=?, tracking_code=? WHERE id=?", 
+                  (member_id, date_gregorian, amount, trans_type, description, tracking_code, transaction_id))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        flash('کد رهگیری تکراری است!', 'error')
+        return False
+    finally:
+        conn.close()
+    return True
+
+def delete_transaction(transaction_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("DELETE FROM transactions WHERE id=?", (transaction_id,))
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
+        flash('خطا در حذف تراکنش!', 'error')
+    finally:
+        conn.close()
 
 def update_balance(member_id, amount, trans_type):
     conn = sqlite3.connect(DB_FILE)
@@ -269,6 +328,32 @@ def admin_add_member():
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('members'))
 
+@app.route('/admin/edit_member/<int:member_id>', methods=['POST'])
+def admin_edit_member(member_id):
+    if 'role' not in session:
+        return redirect(url_for('login'))
+    name = request.form['name']
+    join_date_shamsi = request.form['join_date']
+    username = request.form['username']
+    password = request.form['password']
+    try:
+        join_date_gregorian = shamsi_to_gregorian(join_date_shamsi)
+        if edit_member(member_id, name, join_date_gregorian, username, password):
+            flash('عضو با موفقیت ویرایش شد!', 'message')
+        else:
+            flash('خطا در ویرایش: نام یا یوزرنیم تکراری است!', 'error')
+    except ValueError:
+        flash('تاریخ شمسی نامعتبر!', 'error')
+    return redirect(url_for('members'))
+
+@app.route('/admin/delete_member/<int:member_id>', methods=['POST'])
+def admin_delete_member(member_id):
+    if 'role' not in session:
+        return redirect(url_for('login'))
+    delete_member(member_id)
+    flash('عضو با موفقیت حذف شد!', 'message')
+    return redirect(url_for('members'))
+
 @app.route('/admin/add_transaction', methods=['POST'])
 def admin_add_transaction():
     if 'role' not in session:
@@ -312,6 +397,43 @@ def admin_add_transaction():
         flash(str(e), 'error')
     return redirect(url_for('transactions'))
 
+@app.route('/admin/edit_transaction/<int:transaction_id>', methods=['POST'])
+def admin_edit_transaction(transaction_id):
+    if 'role' not in session:
+        return redirect(url_for('login'))
+    member_name = request.form['member_name']
+    member = Member.load_by_name(member_name)
+    if not member:
+        flash('عضو یافت نشد!', 'error')
+        return redirect(url_for('transactions'))
+    trans_type = request.form['trans_type']
+    try:
+        amount = int(request.form['amount'])
+        tracking_code = int(request.form['tracking_code'])
+    except ValueError:
+        flash('مبلغ یا کد رهگیری نامعتبر است!', 'error')
+        return redirect(url_for('transactions'))
+    date_shamsi = request.form['date']
+    description = request.form['description']
+
+    try:
+        date_gregorian = shamsi_to_gregorian(date_shamsi)
+        if edit_transaction(transaction_id, member.id, date_gregorian, amount, trans_type, description, tracking_code):
+            flash('تراکنش با موفقیت ویرایش شد!', 'message')
+        else:
+            flash('خطا در ویرایش: کد رهگیری تکراری است!', 'error')
+    except ValueError:
+        flash('تاریخ شمسی نامعتبر!', 'error')
+    return redirect(url_for('transactions'))
+
+@app.route('/admin/delete_transaction/<int:transaction_id>', methods=['POST'])
+def admin_delete_transaction(transaction_id):
+    if 'role' not in session:
+        return redirect(url_for('login'))
+    delete_transaction(transaction_id)
+    flash('تراکنش با موفقیت حذف شد!', 'message')
+    return redirect(url_for('transactions'))
+
 @app.route('/transactions')
 def transactions():
     if 'role' not in session:
@@ -321,7 +443,8 @@ def transactions():
     membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
     total = initial_total + membership_total
     member_names = get_all_member_names()
-    return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total, member_names=member_names)
+    members = Member.load_all()
+    return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total, member_names=member_names, members=members)
 
 @app.route('/members')
 def members():
