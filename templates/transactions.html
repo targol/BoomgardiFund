@@ -11,6 +11,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
         th { cursor: pointer; }
+        .summary { margin-top: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -24,8 +25,8 @@
                 <tr>
                     <th onclick="sortTable(0)">شناسه</th>
                     <th onclick="sortTable(1)">نام</th>
-                    <th onclick="sortTable(2)">تاریخ</th>
-                    <th onclick="sortTable(3)">مبلغ</th>
+                    <th onclick="sortTable(2)">تاریخ (شمسی)</th>
+                    <th onclick="sortTable(3)">مبلغ (تومان)</th>
                     <th onclick="sortTable(4)">نوع</th>
                     <th onclick="sortTable(5)">توضیح</th>
                 </tr>
@@ -35,8 +36,8 @@
                     <tr>
                         <td>{{ trans[0] }}</td>
                         <td>{{ trans[1] }}</td>
-                        <td>{{ trans[2] }}</td>
-                        <td>{{ trans[3] }}</td>
+                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
+                        <td>{{ trans[3] | format_number }}</td>
                         <td>{{ trans[4] }}</td>
                         <td>{{ trans[5] }}</td>
                     </tr>
@@ -79,6 +80,11 @@
                 }
             }
         </script>
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
+        </div>
         <a href="/admin">بازگشت به پنل ادمین</a>
     </div>
     <footer>
