@@ -41,10 +41,12 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
         .button { margin-top: 10px; padding: 5px 10px; }
-        .search-box { margin-bottom: 10px; }
-        .search-box input { padding: 5px; width: 200px; }
+        .search-box { margin-bottom: 10px; display: flex; gap: 10px; }
+        .search-box input { padding: 5px; width: 100px; }
         th { cursor: pointer; background-color: #f0f0f0; }
         th:hover { background-color: #e0e0e0; }
+        a.member-link { color: #4A704A; text-decoration: none; }
+        a.member-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -64,7 +66,11 @@
             {% endif %}
         {% endwith %}
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="جستجو...">
+            <input type="text" id="searchName" placeholder="جستجوی نام">
+            <input type="text" id="searchJoinDate" placeholder="جستجوی تاریخ">
+            <input type="text" id="searchInitial" placeholder="جستجوی سرمایه">
+            <input type="text" id="searchMembership" placeholder="جستجوی عضویت">
+            <input type="text" id="searchPoints" placeholder="جستجوی امتیاز">
         </div>
         <table id="membersTable">
             <thead>
@@ -80,7 +86,7 @@
                 {% for member in members %}
                     {% set total_initial, total_membership = member.calculate_totals() %}
                     <tr>
-                        <td>{{ member.name }}</td>
+                        <td><a href="{{ url_for('user_dashboard', username=member.username) }}" class="member-link">{{ member.name }}</a></td>
                         <td>{{ member.join_date | gregorian_to_shamsi }}</td>
                         <td>{{ total_initial | format_number }}</td>
                         <td>{{ total_membership | format_number }}</td>
@@ -128,19 +134,32 @@
         });
 
         // جستجو
-        document.getElementById('searchInput').addEventListener('input', function() {
-            const searchValue = this.value.toLowerCase();
-            const table = document.getElementById('membersTable');
-            const rows = table.querySelectorAll('tbody tr');
+        const searchInputs = {
+            'searchName': 0,
+            'searchJoinDate': 1,
+            'searchInitial': 2,
+            'searchMembership': 3,
+            'searchPoints': 4
+        };
 
-            rows.forEach(row => {
-                let match = false;
-                row.querySelectorAll('td').forEach(cell => {
-                    if (cell.textContent.toLowerCase().includes(searchValue)) {
-                        match = true;
-                    }
+        Object.keys(searchInputs).forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                const table = document.getElementById('membersTable');
+                const rows = table.querySelectorAll('tbody tr');
+                const searchValues = {};
+                Object.keys(searchInputs).forEach(key => {
+                    searchValues[searchInputs[key]] = document.getElementById(key).value.toLowerCase();
                 });
-                row.style.display = match ? '' : 'none';
+
+                rows.forEach(row => {
+                    let match = true;
+                    row.querySelectorAll('td').forEach((cell, index) => {
+                        if (searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
+                            match = false;
+                        }
+                    });
+                    row.style.display = match ? '' : 'none';
+                });
             });
         });
     </script>
