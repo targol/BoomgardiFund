@@ -41,17 +41,18 @@
         input { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 200px; }
         select { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 210px; }
         .button { margin-top: 10px; padding: 5px 10px; }
+        .summary { margin-top: 20px; font-weight: bold; color: #333; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="{{ url_for('admin_panel') }}">پنل ادمین</a>
+        <a href="{{ url_for('admin_panel') }}">خانه</a>
         <a href="{{ url_for('members') }}">لیست اعضا</a>
         <a href="{{ url_for('transactions') }}">تراکنش‌ها</a>
         <a href="{{ url_for('logout') }}">خروج</a>
     </div>
     <div class="content">
-        <h1>پنل ادمین</h1>
+        <h1>خانه</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -59,6 +60,10 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        <div class="summary">
+            <p>تاریخ روز: ۱۵ اوت ۲۰۲۵</p>
+            <p>مجموع موجودی فعلی صندوق: {{ total_balance | format_number }} تومان</p>
+        </div>
         <div class="forms-container">
             <div class="form-column">
                 <h2>اضافه کردن عضو جدید</h2>
