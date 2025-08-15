@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 import os
-from flask import Flask, request, render_template_string, redirect, url_for, session, flash, get_flashed_messages, send_from_directory
+from flask import Flask, request, render_template, redirect, url_for, session, flash, get_flashed_messages
 import secrets
 from jdatetime import date as jdate  # برای تبدیل شمسی به میلادی
 
@@ -99,6 +99,14 @@ def update_balance(member_id, amount, trans_type):
     conn.commit()
     conn.close()
 
+def get_all_transactions():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT t.id, m.name, t.date, t.amount, t.type, t.description FROM transactions t JOIN members m ON t.member_id = m.id ORDER BY t.date ASC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
 # تبدیل تاریخ شمسی به میلادی
 def shamsi_to_gregorian(shamsi_date):
     year, month, day = map(int, shamsi_date.split('-'))
@@ -106,246 +114,8 @@ def shamsi_to_gregorian(shamsi_date):
     return jd.togregorian().strftime("%Y-%m-%d")
 
 # اپ Flask
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = secrets.token_hex(16)
-
-# سرو فایل‌های استاتیک مثل لوگو
-@app.route('/logo.png')
-def serve_logo():
-    return send_from_directory(os.getcwd(), 'logo.png')
-
-# تمپلیت لاگین
-LOGIN_HTML = '''
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-    <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
-        form { margin-bottom: 20px; }
-        .message { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <header>
-        <img src="/logo.png" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
-        <h1>لاگین</h1>
-        {% for message in get_flashed_messages(with_categories=true) %}
-            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-        {% endfor %}
-        <form method="post">
-            نام کاربری: <input type="text" name="username"><br>
-            پسورد: <input type="password" name="password"><br>
-            <input type="submit" value="ورود">
-        </form>
-    </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
-</body>
-</html>
-'''
-
-# تمپلیت وضعیت
-STATUS_HTML = '''
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-    <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
-        form { margin-bottom: 20px; }
-        .message { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <header>
-        <img src="/logo.png" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
-        <h1>وضعیت برای {{ name }}</h1>
-        <p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
-        <p>موجودی شما: {{ balance }} تومان</p>
-        <p>امتیاز شما: {{ points }}</p>
-        <a href="/logout">خروج</a>
-    </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
-</body>
-</html>
-'''
-
-# تمپلیت پنل مدیر با دو ستون و لیست اعضا
-ADMIN_HTML = '''
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-    <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
-        form { margin-bottom: 20px; }
-        .message { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; }
-        th { cursor: pointer; }
-        .pagination { margin-top: 10px; }
-        .pagination a { margin: 0 5px; }
-    </style>
-</head>
-<body>
-    <header>
-        <img src="/logo.png" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
-        <div class="left-column">
-            {% for message in get_flashed_messages(with_categories=true) %}
-                {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-                {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
-            {% endfor %}
-            <h2>ثبت کاربر جدید</h2>
-            <form action="/admin/add_member" method="post">
-                نام: <input type="text" name="name"><br>
-                تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
-                <script>
-                    $(document).ready(function() {
-                        $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date(), viewMode: 'days'});
-                    });
-                </script>
-                <input type="submit" value="اضافه کن">
-            </form>
-            <h2>لیست اعضا</h2>
-            <table id="membersTable">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">نام</th>
-                        <th onclick="sortTable(1)">تاریخ عضویت</th>
-                        <th onclick="sortTable(2)">سرمایه اولیه</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member in members %}
-                        <tr>
-                            <td>{{ member.name }}</td>
-                            <td>{{ member.join_date }}</td>
-                            <td>{{ member.initial_capital }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="pagination">
-                <a href="#" onclick="showPage(1)">1</a>
-                <a href="#" onclick="showPage(2)">2</a>
-                <!-- اضافه کن بر اساس تعداد -->
-            </div>
-            <script>
-                function sortTable(n) {
-                    var table = document.getElementById("membersTable");
-                    var rows, switching, i, x, y, shouldSwitch, dir = "asc";
-                    switching = true;
-                    while (switching) {
-                        switching = false;
-                        rows = table.rows;
-                        for (i = 1; i < (rows.length - 1); i++) {
-                            shouldSwitch = false;
-                            x = rows[i].getElementsByTagName("TD")[n];
-                            y = rows[i + 1].getElementsByTagName("TD")[n];
-                            if (dir == "asc") {
-                                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                    shouldSwitch = true;
-                                    break;
-                                }
-                            } else if (dir == "desc") {
-                                if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                    shouldSwitch = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (shouldSwitch) {
-                            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                            switching = true;
-                            switchcount++; 
-                        } else {
-                            if (switchcount == 0 && dir == "asc") {
-                                dir = "desc";
-                                switching = true;
-                            }
-                        }
-                    }
-                }
-
-                function showPage(page) {
-                    var rows = document.getElementById("membersTable").rows;
-                    for (var i = 1; i < rows.length; i++) {
-                        rows[i].style.display = "none";
-                    }
-                    var start = (page - 1) * 10 + 1;
-                    var end = start + 9;
-                    for (var i = start; i <= end && i < rows.length; i++) {
-                        rows[i].style.display = "";
-                    }
-                }
-                showPage(1);  // شروع با صفحه اول
-            </script>
-        </div>
-        <div class="right-column">
-            <h2>ثبت تراکنش</h2>
-            <form action="/admin/add_transaction" method="post">
-                انتخاب کاربر: <select name="member_name">
-                    {% for member in members %}
-                        <option value="{{ member.name }}">{{ member.name }}</option>
-                    {% endfor %}
-                </select><br>
-                نوع تراکنش: <select name="trans_type">
-                    <option value="initial">سرمایه اولیه</option>
-                    <option value="membership">عضویت ماهانه</option>
-                    <option value="installment">قسط وام</option>
-                </select><br>
-                مبلغ (تومان): <input type="number" name="amount"><br>
-                تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
-                توضیح: <input type="text" name="description"><br>
-                <script>
-                    $(document).ready(function() {
-                        $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date(), viewMode: 'days'});
-                    });
-                </script>
-                <input type="submit" value="ثبت">
-            </form>
-        </div>
-    </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
-</body>
-</html>
-'''
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -361,7 +131,7 @@ def login():
             session['username'] = username
             return redirect(url_for('status'))
         flash('لاگین ناموفق!', 'error')
-    return render_template_string(LOGIN_HTML)
+    return render_template('login.html')
 
 @app.route('/status')
 def status():
@@ -372,7 +142,7 @@ def status():
         current_date = datetime.now().strftime("%Y-%m-%d")
         points = member.calculate_points(current_date)
         fund_balance = sum(m.current_balance for m in Member.load_all())
-        return render_template_string(STATUS_HTML, name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
+        return render_template('status.html', name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -380,7 +150,7 @@ def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     members = Member.load_all()
-    return render_template_string(ADMIN_HTML, members=members)
+    return render_template('admin.html', members=members)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -416,7 +186,6 @@ def admin_add_transaction():
     date_shamsi = request.form['date']
     description = request.form['description']
 
-    # اعتبارسنجی مبلغ
     if trans_type == 'initial':
         if amount < 5000000 or amount % 5000000 != 0:
             flash('سرمایه اولیه باید حداقل ۵ میلیون و مضرب ۵ میلیون باشد!', 'error')
@@ -434,6 +203,20 @@ def admin_add_transaction():
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
+
+@app.route('/transactions')
+def transactions():
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+    transactions = get_all_transactions()
+    return render_template('transactions.html', transactions=transactions)
+
+@app.route('/members')
+def members():
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+    members = Member.load_all()
+    return render_template('members.html', members=members)
 
 @app.route('/logout')
 def logout():
