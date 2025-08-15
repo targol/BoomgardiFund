@@ -10,7 +10,7 @@
         footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
-        th { cursor: pointer; }
+        .search { margin-bottom: 10px; }
         .summary { margin-top: 20px; font-weight: bold; }
     </style>
 </head>
@@ -20,6 +20,14 @@
     </header>
     <div class="container">
         <h1>تراکنش‌های {{ member_name }}</h1>
+        <div class="search">
+            <input type="text" id="searchId" placeholder="جستجوی شناسه" onkeyup="searchTable(0)">
+            <input type="text" id="searchDate" placeholder="جستجوی تاریخ" onkeyup="searchTable(1)">
+            <input type="text" id="searchAmount" placeholder="جستجوی مبلغ" onkeyup="searchTable(2)">
+            <input type="text" id="searchType" placeholder="جستجوی نوع" onkeyup="searchTable(3)">
+            <input type="text" id="searchDesc" placeholder="جستجوی توضیح" onkeyup="searchTable(4)">
+            <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری" onkeyup="searchTable(5)">
+        </div>
         <table id="transactionsTable">
             <thead>
                 <tr>
@@ -75,6 +83,25 @@
                         if (switchcount == 0 && dir == "asc") {
                             dir = "desc";
                             switching = true;
+                        }
+                    }
+                }
+            }
+
+            function searchTable(column) {
+                var input, filter, table, tr, td, i, txtValue;
+                input = [document.getElementById("searchId"), document.getElementById("searchDate"), document.getElementById("searchAmount"), document.getElementById("searchType"), document.getElementById("searchDesc"), document.getElementById("searchCode")];
+                filter = input[column].value.toLowerCase();
+                table = document.getElementById("transactionsTable");
+                tr = table.getElementsByTagName("tr");
+                for (i = 1; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName("td")[column];
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
                         }
                     }
                 }
