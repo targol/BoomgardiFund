@@ -8,17 +8,13 @@
         header { background-color: #f0f0f0; padding: 20px; }
         .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
         footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; }
-        .search { margin-bottom: 10px; }
-        .pagination { margin-top: 10px; }
-        .pagination a { margin: 0 5px; }
-        a.member-link { color: #4CAF50; text-decoration: none; }
-        a.member-link:hover { text-decoration: underline; }
+        .forms-container { display: flex; justify-content: space-between; }
+        .form-column { width: 45%; }
         form { margin-top: 20px; }
         label { display: block; margin-bottom: 5px; }
-        input { padding: 5px; margin-bottom: 10px; width: 200px; }
-        select { padding: 5px; margin-bottom: 10px; width: 210px; }
+        input { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 200px; }
+        select { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 210px; }
+        .button { margin-top: 10px; padding: 5px 10px; }
     </style>
 </head>
 <body>
@@ -34,141 +30,46 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        <h2>اضافه کردن عضو جدید</h2>
-        <form method="POST" action="{{ url_for('admin_add_member') }}">
-            <label for="name">نام:</label>
-            <input type="text" id="name" name="name" required>
-            <label for="join_date">تاریخ عضویت (شمسی - YYYY-MM-DD):</label>
-            <input type="text" id="join_date" name="join_date" required>
-            <label for="username">یوزرنیم:</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">پسورد:</label>
-            <input type="password" id="password" name="password" required>
-            <input type="submit" value="اضافه کردن">
-        </form>
-        <h2>اضافه کردن تراکنش جدید</h2>
-        <form method="POST" action="{{ url_for('admin_add_transaction') }}">
-            <label for="member_name">نام عضو:</label>
-            <input type="text" id="member_name" name="member_name" required>
-            <label for="trans_type">نوع تراکنش:</label>
-            <select id="trans_type" name="trans_type" required>
-                <option value="initial">سرمایه اولیه</option>
-                <option value="membership">عضویت ماهانه</option>
-                <option value="installment">قسط وام</option>
-            </select>
-            <label for="amount">مبلغ (تومان):</label>
-            <input type="number" id="amount" name="amount" required>
-            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
-            <input type="text" id="date" name="date" required>
-            <label for="description">توضیحات:</label>
-            <input type="text" id="description" name="description">
-            <label for="tracking_code">کد رهگیری:</label>
-            <input type="number" id="tracking_code" name="tracking_code" required>
-            <input type="submit" value="ثبت تراکنش">
-        </form>
-        <h2>لیست اعضا</h2>
-        <div class="search">
-            <input type="text" id="searchName" placeholder="جستجوی نام" onkeyup="searchTable(0)">
-            <input type="text" id="searchJoinDate" placeholder="جستجوی تاریخ عضویت" onkeyup="searchTable(1)">
-            <input type="text" id="searchInitial" placeholder="جستجوی مجموع سرمایه" onkeyup="searchTable(2)">
-            <input type="text" id="searchMembership" placeholder="جستجوی مجموع حق عضویت" onkeyup="searchTable(3)">
-            <input type="text" id="searchPoints" placeholder="جستجوی مجموع امتیاز" onkeyup="searchTable(4)">
+        <div class="forms-container">
+            <div class="form-column">
+                <h2>اضافه کردن عضو جدید</h2>
+                <form method="POST" action="{{ url_for('admin_add_member') }}">
+                    <label for="name">نام:</label>
+                    <input type="text" id="name" name="name" required>
+                    <label for="join_date">تاریخ عضویت (شمسی - YYYY-MM-DD):</label>
+                    <input type="text" id="join_date" name="join_date" required>
+                    <label for="username">یوزرنیم:</label>
+                    <input type="text" id="username" name="username" required>
+                    <label for="password">پسورد:</label>
+                    <input type="password" id="password" name="password" required>
+                    <input type="submit" value="اضافه کردن">
+                </form>
+                <a href="{{ url_for('members') }}" class="button">مشاهده لیست اعضا</a>
+            </div>
+            <div class="form-column">
+                <h2>اضافه کردن تراکنش جدید</h2>
+                <form method="POST" action="{{ url_for('admin_add_transaction') }}">
+                    <label for="member_name">نام عضو:</label>
+                    <input type="text" id="member_name" name="member_name" required>
+                    <label for="trans_type">نوع تراکنش:</label>
+                    <select id="trans_type" name="trans_type" required>
+                        <option value="initial">سرمایه اولیه</option>
+                        <option value="membership">عضویت ماهانه</option>
+                        <option value="installment">قسط وام</option>
+                    </select>
+                    <label for="amount">مبلغ (تومان):</label>
+                    <input type="number" id="amount" name="amount" required>
+                    <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
+                    <input type="text" id="date" name="date" required>
+                    <label for="description">توضیحات:</label>
+                    <input type="text" id="description" name="description">
+                    <label for="tracking_code">کد رهگیری:</label>
+                    <input type="number" id="tracking_code" name="tracking_code" required>
+                    <input type="submit" value="ثبت تراکنش">
+                </form>
+                <a href="{{ url_for('transactions') }}" class="button">مشاهده تراکنش‌ها</a>
+            </div>
         </div>
-        <table id="membersTable">
-            <thead>
-                <tr>
-                    <th onclick="sortTable(0)">نام</th>
-                    <th onclick="sortTable(1)">تاریخ عضویت (شمسی)</th>
-                    <th onclick="sortTable(2)">مجموع سرمایه (تومان)</th>
-                    <th onclick="sortTable(3)">مجموع حق عضویت (تومان)</th>
-                    <th onclick="sortTable(4)">مجموع امتیاز</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in members %}
-                    {% set total_initial, total_membership = member.calculate_totals() %}
-                    <tr>
-                        <td><a href="{{ url_for('transactions_member', member_name=member.name) }}" class="member-link">{{ member.name }}</a></td>
-                        <td>{{ member.join_date | gregorian_to_shamsi }}</td>
-                        <td>{{ total_initial | format_number }}</td>
-                        <td>{{ total_membership | format_number }}</td>
-                        <td>{{ member.points | format_number }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <div class="pagination">
-            <a href="#" onclick="showPage(1)">1</a>
-            <a href="#" onclick="showPage(2)">2</a>
-        </div>
-        <script>
-            function sortTable(n) {
-                var table = document.getElementById("membersTable");
-                var rows, switching, i, x, y, shouldSwitch, dir = "asc";
-                switching = true;
-                while (switching) {
-                    switching = false;
-                    rows = table.rows;
-                    for (i = 1; i < (rows.length - 1); i++) {
-                        shouldSwitch = false;
-                        x = rows[i].getElementsByTagName("TD")[n];
-                        y = rows[i + 1].getElementsByTagName("TD")[n];
-                        if (dir == "asc") {
-                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir == "desc") {
-                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (shouldSwitch) {
-                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                        switching = true;
-                    } else {
-                        if (switchcount == 0 && dir == "asc") {
-                            dir = "desc";
-                            switching = true;
-                        }
-                    }
-                }
-            }
-
-            function searchTable(column) {
-                var input, filter, table, tr, td, i, txtValue;
-                input = [document.getElementById("searchName"), document.getElementById("searchJoinDate"), document.getElementById("searchInitial"), document.getElementById("searchMembership"), document.getElementById("searchPoints")];
-                filter = input[column].value.toLowerCase();
-                table = document.getElementById("membersTable");
-                tr = table.getElementsByTagName("tr");
-                for (i = 1; i < tr.length; i++) {
-                    td = tr[i].getElementsByTagName("td")[column];
-                    if (td) {
-                        txtValue = td.textContent || td.innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            tr[i].style.display = "";
-                        } else {
-                            tr[i].style.display = "none";
-                        }
-                    }
-                }
-            }
-
-            function showPage(page) {
-                var rows = document.getElementById("membersTable").rows;
-                for (var i = 1; i < rows.length; i++) {
-                    rows[i].style.display = "none";
-                }
-                var start = (page - 1) * 10 + 1;
-                var end = start + 9;
-                for (var i = start; i <= end && i < rows.length; i++) {
-                    rows[i].style.display = "";
-                }
-            }
-            showPage(1);
-        </script>
         <a href="{{ url_for('logout') }}">خروج</a>
     </div>
     <footer>
