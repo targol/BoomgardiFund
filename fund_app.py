@@ -264,7 +264,7 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        # به‌روزرسانی تاریخچه از تاریخ عضویت تا امروز
+        # به‌روزرسانی تاریخچه از تاریخ عضویت یا تاریخ تراکنش تا امروز
         start_date = max(datetime.strptime(member.join_date, "%Y-%m-%d"), datetime.strptime(date_gregorian, "%Y-%m-%d"))
         current_date = start_date
         end_date = datetime.now()
