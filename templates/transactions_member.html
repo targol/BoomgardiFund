@@ -12,7 +12,9 @@
         th, td { border: 1px solid #ddd; padding: 8px; }
         .search { margin-bottom: 10px; }
         .summary { margin-top: 20px; font-weight: bold; }
-        .details-link { margin-top: 10px; display: block; }
+        .pagination { margin-top: 10px; }
+        .pagination a { margin: 0 5px; text-decoration: none; color: #4CAF50; }
+        .pagination a.active { font-weight: bold; color: #000; }
     </style>
 </head>
 <body>
@@ -58,6 +60,12 @@
                 {% endfor %}
             </tbody>
         </table>
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
+        </div>
+        <div class="pagination" id="pagination"></div>
         <script>
             function sortTable(n) {
                 var table = document.getElementById("transactionsTable");
@@ -111,16 +119,48 @@
                         }
                     }
                 }
+                showPage(1); // به‌روزرسانی صفحه‌بندی بعد از جستجو
             }
+
+            function showPage(page) {
+                var table = document.getElementById("transactionsTable");
+                var rows = table.getElementsByTagName("tr");
+                var totalRows = rows.length - 1; // بدون سرستون
+                var totalPages = Math.ceil(totalRows / 10);
+                for (var i = 1; i < rows.length; i++) {
+                    rows[i].style.display = "none";
+                }
+                var start = (page - 1) * 10 + 1;
+                var end = Math.min(start + 9, totalRows);
+                for (var i = start; i <= end; i++) {
+                    if (rows[i] && rows[i].style.display !== "none") {
+                        rows[i].style.display = "";
+                    }
+                }
+                updatePagination(page, totalPages);
+            }
+
+            function updatePagination(currentPage, totalPages) {
+                var pagination = document.getElementById("pagination");
+                pagination.innerHTML = '';
+                for (var i = 1; i <= totalPages; i++) {
+                    var a = document.createElement('a');
+                    a.href = '#';
+                    a.textContent = i;
+                    if (i === currentPage) a.className = 'active';
+                    a.onclick = function(num) { return function() { showPage(num); }; }(i);
+                    pagination.appendChild(a);
+                }
+            }
+
+            // نمایش صفحه اول به‌طور پیش‌فرض
+            window.onload = function() {
+                var rows = document.getElementById("transactionsTable").rows;
+                var totalPages = Math.ceil((rows.length - 1) / 10);
+                showPage(1);
+            };
         </script>
-        <div class="summary">
-            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
-            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
-            <p>جمع کل: {{ total | format_number }} تومان</p>
-        </div>
         <a href="/admin">بازگشت به پنل ادمین</a>
-        <a href="/members">بازگشت به لیست اعضا</a>
-        <a href="{{ url_for('details', member_name=member_name) }}" class="details-link">جزییات امتیازات</a>
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
