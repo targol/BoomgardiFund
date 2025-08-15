@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 from flask import Flask, request, render_template, redirect, url_for, session, flash, get_flashed_messages
 import secrets
-from jdatetime import date as jdate  # برای تبدیل شمسی به میلادی
+from jdatetime import date as jdate
 
 # تنظیم دیتابیس
 DB_FILE = 'fund.db'
