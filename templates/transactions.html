@@ -42,10 +42,12 @@
         th, td { border: 1px solid #ddd; padding: 8px; }
         .summary { margin-top: 20px; font-weight: bold; color: #333; }
         .button { margin-top: 10px; padding: 5px 10px; }
-        .search-box { margin-bottom: 10px; }
-        .search-box input { padding: 5px; width: 200px; }
+        .search-box { margin-bottom: 10px; display: flex; gap: 10px; }
+        .search-box input { padding: 5px; width: 100px; }
         th { cursor: pointer; background-color: #f0f0f0; }
         th:hover { background-color: #e0e0e0; }
+        a.member-link { color: #4A704A; text-decoration: none; }
+        a.member-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -65,7 +67,13 @@
             {% endif %}
         {% endwith %}
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="جستجو...">
+            <input type="text" id="searchId" placeholder="جستجوی شناسه">
+            <input type="text" id="searchName" placeholder="جستجوی نام">
+            <input type="text" id="searchDate" placeholder="جستجوی تاریخ">
+            <input type="text" id="searchAmount" placeholder="جستجوی مبلغ">
+            <input type="text" id="searchType" placeholder="جستجوی نوع">
+            <input type="text" id="searchDesc" placeholder="جستجوی توضیحات">
+            <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری">
         </div>
         <table id="transactionsTable">
             <thead>
@@ -83,7 +91,7 @@
                 {% for trans in transactions %}
                     <tr>
                         <td>{{ trans[0] }}</td>
-                        <td>{{ trans[1] }}</td>
+                        <td><a href="{{ url_for('user_dashboard', username=(members|selectattr('name', 'equalto', trans[1])|first.username if members|selectattr('name', 'equalto', trans[1])|first else '') }}" class="member-link">{{ trans[1] }}</a></td>
                         <td>{{ trans[2] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[3] | format_number }}</td>
                         <td>
@@ -154,19 +162,34 @@
         });
 
         // جستجو
-        document.getElementById('searchInput').addEventListener('input', function() {
-            const searchValue = this.value.toLowerCase();
-            const table = document.getElementById('transactionsTable');
-            const rows = table.querySelectorAll('tbody tr');
+        const searchInputs = {
+            'searchId': 0,
+            'searchName': 1,
+            'searchDate': 2,
+            'searchAmount': 3,
+            'searchType': 4,
+            'searchDesc': 5,
+            'searchCode': 6
+        };
 
-            rows.forEach(row => {
-                let match = false;
-                row.querySelectorAll('td').forEach(cell => {
-                    if (cell.textContent.toLowerCase().includes(searchValue)) {
-                        match = true;
-                    }
+        Object.keys(searchInputs).forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                const table = document.getElementById('transactionsTable');
+                const rows = table.querySelectorAll('tbody tr');
+                const searchValues = {};
+                Object.keys(searchInputs).forEach(key => {
+                    searchValues[searchInputs[key]] = document.getElementById(key).value.toLowerCase();
                 });
-                row.style.display = match ? '' : 'none';
+
+                rows.forEach(row => {
+                    let match = true;
+                    row.querySelectorAll('td').forEach((cell, index) => {
+                        if (searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
+                            match = false;
+                        }
+                    });
+                    row.style.display = match ? '' : 'none';
+                });
             });
         });
     </script>
