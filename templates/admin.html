@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: 'Vazirmatn', sans-serif;
@@ -38,14 +39,8 @@
             flex-grow: 1;
             width: calc(100% - 220px);
         }
-        .forms-container { display: flex; justify-content: space-between; }
-        .form-column { width: 45%; }
-        form { margin-top: 20px; }
-        label { display: block; margin-bottom: 5px; }
-        input { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 200px; }
-        select { padding: 5px; margin-bottom: 10px; width: 100%; max-width: 210px; }
-        .button { margin-top: 10px; padding: 5px 10px; }
         .summary { margin-top: 20px; font-weight: bold; color: #333; }
+        .button { margin-top: 10px; padding: 5px 10px; }
     </style>
 </head>
 <body>
@@ -56,7 +51,7 @@
         <a href="{{ url_for('logout') }}">خروج</a>
     </div>
     <div class="content">
-        <h1>خانه</h1>
+        <h1>پنل مدیریت</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -64,57 +59,48 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        <h2>اضافه کردن تراکنش جدید</h2>
+        <form method="POST" action="{{ url_for('admin_add_transaction') }}">
+            <div class="mb-3">
+                <label for="member_name" class="form-label">نام عضو:</label>
+                <select id="member_name" name="member_name" class="form-control" required>
+                    {% for member in members %}
+                        <option value="{{ member.name }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="trans_type" class="form-label">نوع تراکنش:</label>
+                <select id="trans_type" name="trans_type" class="form-control" required>
+                    <option value="initial">سرمایه اولیه</option>
+                    <option value="membership">عضویت ماهانه</option>
+                    <option value="installment">قسط وام</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="amount" class="form-label">مبلغ (تومان):</label>
+                <input type="number" id="amount" name="amount" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="date" class="form-label">تاریخ (شمسی - YYYY-MM-DD):</label>
+                <input type="text" id="date" name="date" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">توضیحات:</label>
+                <input type="text" id="description" name="description" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label for="tracking_code" class="form-label">کد رهگیری:</label>
+                <input type="number" id="tracking_code" name="tracking_code" class="form-control" required>
+            </div>
+            <input type="submit" value="اضافه کردن تراکنش" class="btn btn-success">
+        </form>
         <div class="summary">
-            <p>تاریخ روز: {{ '2025-08-15' | gregorian_to_shamsi }}</p>
-            <p>مجموع موجودی فعلی صندوق: {{ total_balance | format_number }} تومان</p>
+            <p>تعداد کل اعضا: {{ members|length }}</p>
+            <p>تعداد کل تراکنش‌ها: {{ transactions|length }}</p>
         </div>
-        <div class="forms-container">
-            <div class="form-column">
-                <h2>اضافه کردن عضو جدید</h2>
-                <form method="POST" action="{{ url_for('admin_add_member') }}">
-                    <label for="name">نام:</label>
-                    <input type="text" id="name" name="name" required>
-                    <label for="join_date">تاریخ عضویت (شمسی - YYYY-MM-DD):</label>
-                    <input type="text" id="join_date" name="join_date" required>
-                    <label for="username">یوزرنیم:</label>
-                    <input type="text" id="username" name="username" required>
-                    <label for="password">پسورد:</label>
-                    <input type="password" id="password" name="password" required>
-                    <input type="submit" value="اضافه کردن">
-                </form>
-                <a href="{{ url_for('members') }}" class="button">مشاهده لیست اعضا</a>
-            </div>
-            <div class="form-column">
-                <h2>اضافه کردن تراکنش جدید</h2>
-                <form method="POST" action="{{ url_for('admin_add_transaction') }}">
-                    <label for="member_name">نام عضو:</label>
-                      <select id="member_name" name="member_name" required>
-                      {% for name in member_names %}
-                      <option value="{{ name }}">{{ name }}</option>
-                      {% endfor %}
-                      </select>
-                   
-                    <input type="text" id="member_name" name="member_name" required>
-                    <label for="trans_type">نوع تراکنش:</label>
-                    <select id="trans_type" name="trans_type" required>
-                        <option value="initial">سرمایه اولیه</option>
-                        <option value="membership">عضویت ماهانه</option>
-                        <option value="installment">قسط وام</option>
-                    </select>
-                    <label for="amount">مبلغ (تومان):</label>
-                    <input type="number" id="amount" name="amount" required>
-                    <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
-                    <input type="text" id="date" name="date" required>
-                    <label for="description">توضیحات:</label>
-                    <input type="text" id="description" name="description">
-                    <label for="tracking_code">کد رهگیری:</label>
-                    <input type="number" id="tracking_code" name="tracking_code" required>
-                    <input type="submit" value="ثبت تراکنش">
-                </form>
-                <a href="{{ url_for('transactions') }}" class="button">مشاهده تراکنش‌ها</a>
-            </div>
-        </div>
+        <a href="{{ url_for('logout') }}" class="button">خروج</a>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
