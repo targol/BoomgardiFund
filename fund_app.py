@@ -109,7 +109,7 @@ def shamsi_to_gregorian(shamsi_date):
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# تمپلیت‌ها با استایل جدید
+# تمپلیت‌ها با ساختار جنیجور
 BASE_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -122,7 +122,7 @@ BASE_HTML = '''
     <style>
         body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
         header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
         footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
         form { margin-bottom: 20px; }
         .message { color: green; font-weight: bold; }
@@ -134,7 +134,7 @@ BASE_HTML = '''
         <img src="logo.png" alt="لوگو صندوق" width="200">
     </header>
     <div class="container">
-        %s
+        {% block content %}{% endblock %}
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
@@ -143,30 +143,38 @@ BASE_HTML = '''
 </html>
 '''
 
-LOGIN_HTML = BASE_HTML % '''
+LOGIN_HTML = '''
+{% extends "base.html" %}
+{% block content %}
 <h1>لاگین</h1>
+{% for message in get_flashed_messages(with_categories=true) %}
+    {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+{% endfor %}
 <form method="post">
     نام کاربری: <input type="text" name="username"><br>
     پسورد: <input type="password" name="password"><br>
     <input type="submit" value="ورود">
 </form>
+{% endblock %}
 '''
 
-STATUS_HTML = BASE_HTML % '''
+STATUS_HTML = '''
+{% extends "base.html" %}
+{% block content %}
 <h1>وضعیت برای {{ name }}</h1>
 <p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
 <p>موجودی شما: {{ balance }} تومان</p>
 <p>امتیاز شما: {{ points }}</p>
 <a href="/logout">خروج</a>
+{% endblock %}
 '''
 
 ADMIN_HTML = '''
+{% extends "base.html" %}
+{% block content %}
 {% for message in get_flashed_messages(with_categories=true) %}
-    {% if message[0] == 'error' %}
-        <p class="error">{{ message[1] }}</p>
-    {% else %}
-        <p class="message">{{ message[1] }}</p>
-    {% endif %}
+    {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+    {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
 {% endfor %}
 <h1>پنل مدیر</h1>
 <h2>ثبت کاربر جدید</h2>
@@ -204,6 +212,7 @@ ADMIN_HTML = '''
     <input type="submit" value="ثبت">
 </form>
 <a href="/logout">خروج</a>
+{% endblock %}
 '''
 
 @app.route('/', methods=['GET', 'POST'])
@@ -239,7 +248,7 @@ def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     members = Member.load_all()
-    return render_template_string(BASE_HTML % ADMIN_HTML, members=members)
+    return render_template_string(ADMIN_HTML, members=members)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -250,7 +259,7 @@ def admin_add_member():
     try:
         join_date_gregorian = shamsi_to_gregorian(join_date_shamsi)
         if add_member(name, join_date_gregorian):
-            flash('عضو اضافه شد!')
+            flash('عضو اضافه شد!', 'message')
         else:
             flash('نام تکراری است!', 'error')
     except ValueError:
@@ -289,7 +298,7 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description)
         update_balance(member.id, amount, trans_type)
-        flash('تراکنش ثبت شد!')
+        flash('تراکنش ثبت شد!', 'message')
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
