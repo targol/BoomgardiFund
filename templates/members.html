@@ -41,8 +41,10 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
         .button { margin-top: 10px; padding: 5px 10px; }
-        a.member-link { color: #4A704A; text-decoration: none; }
-        a.member-link:hover { text-decoration: underline; }
+        .search-box { margin-bottom: 10px; }
+        .search-box input { padding: 5px; width: 200px; }
+        th { cursor: pointer; background-color: #f0f0f0; }
+        th:hover { background-color: #e0e0e0; }
     </style>
 </head>
 <body>
@@ -61,7 +63,32 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="جستجو...">
+        </div>
+        <table id="membersTable">
+            <thead>
+                <tr>
+                    <th data-sort="name">نام</th>
+                    <th data-sort="join_date">تاریخ عضویت (شمسی)</th>
+                    <th data-sort="initial_capital">مجموع سرمایه (تومان)</th>
+                    <th data-sort="membership">مجموع حق عضویت (تومان)</th>
+                    <th data-sort="points">مجموع امتیاز</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                    {% set total_initial, total_membership = member.calculate_totals() %}
+                    <tr>
+                        <td>{{ member.name }}</td>
+                        <td>{{ member.join_date | gregorian_to_shamsi }}</td>
+                        <td>{{ total_initial | format_number }}</td>
+                        <td>{{ total_membership | format_number }}</td>
+                        <td>{{ member.points | format_number }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         <form method="POST" action="{{ url_for('admin_add_member') }}">
             <label for="name">نام:</label>
             <input type="text" id="name" name="name" required>
@@ -73,33 +100,49 @@
             <input type="password" id="password" name="password" required>
             <input type="submit" value="اضافه کردن عضو جدید" class="button">
         </form>
-        <table>
-            <thead>
-                <tr>
-                    <th>نام</th>
-                    <th>تاریخ عضویت (شمسی)</th>
-                    <th>مجموع سرمایه (تومان)</th>
-                    <th>مجموع حق عضویت (تومان)</th>
-                    <th>مجموع امتیاز</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in members %}
-                    {% set total_initial, total_membership = member.calculate_totals() %}
-                    <tr>
-                        <td><a href="{{ url_for('user_dashboard', username=member.username) }}" class="member-link">{{ member.name }}</a></td>
-                        <td>{{ member.join_date | gregorian_to_shamsi }}</td>
-                        <td>{{ total_initial | format_number }}</td>
-                        <td>{{ total_membership | format_number }}</td>
-                        <td>{{ member.points | format_number }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-       
+        <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
     </div>
+    <script>
+        // مرتب‌سازی
+        document.querySelectorAll('th').forEach(header => {
+            header.addEventListener('click', () => {
+                const table = document.getElementById('membersTable');
+                const headerIndex = Array.from(header.parentElement.children).indexOf(header);
+                const isAscending = header.classList.contains('asc');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                rows.sort((a, b) => {
+                    const aValue = a.cells[headerIndex].textContent.trim();
+                    const bValue = b.cells[headerIndex].textContent.trim();
+                    const numA = isNaN(aValue) ? aValue : parseFloat(aValue.replace(/[^\d.-]/g, ''));
+                    const numB = isNaN(bValue) ? bValue : parseFloat(bValue.replace(/[^\d.-]/g, ''));
+                    return isAscending ? (numA > numB ? 1 : -1) : (numA < numB ? 1 : -1);
+                });
+
+                document.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+                header.classList.add(isAscending ? 'desc' : 'asc');
+
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+
+        // جستجو
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchValue = this.value.toLowerCase();
+            const table = document.getElementById('membersTable');
+            const rows = table.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                let match = false;
+                row.querySelectorAll('td').forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(searchValue)) {
+                        match = true;
+                    }
+                });
+                row.style.display = match ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
-
-
