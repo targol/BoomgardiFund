@@ -13,6 +13,8 @@
         th { cursor: pointer; }
         .pagination { margin-top: 10px; }
         .pagination a { margin: 0 5px; }
+        a.member-link { color: #4CAF50; text-decoration: none; }
+        a.member-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -32,7 +34,7 @@
             <tbody>
                 {% for member in members %}
                     <tr>
-                        <td>{{ member.name }}</td>
+                        <td><a href="{{ url_for('transactions_member', member_name=member.name) }}" class="member-link">{{ member.name }}</a></td>
                         <td>{{ member.join_date | gregorian_to_shamsi }}</td>
                         <td>{{ member.initial_capital | format_number }}</td>
                     </tr>
