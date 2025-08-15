@@ -190,6 +190,14 @@ def get_transactions_by_member(member_name):
     conn.close()
     return rows
 
+def get_total_balance():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT SUM(current_balance) FROM members")
+    total = c.fetchone()[0] or 0
+    conn.close()
+    return total
+
 def shamsi_to_gregorian(shamsi_date):
     year, month, day = map(int, shamsi_date.split('-'))
     jd = jdate(year, month, day)
@@ -226,24 +234,12 @@ def login():
         flash('لاگین ناموفق!', 'error')
     return render_template('login.html')
 
-@app.route('/user/<username>')
-def user_dashboard(username):
-    if session.get('role') != 'member' or session.get('username') != username:
-        return redirect(url_for('login'))
-    member = Member.load_by_username(username)
-    if member:
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        member.update_daily_balance(current_date)
-        total_initial, total_membership = member.calculate_totals()
-        details = member.get_daily_balances()
-        return render_template('user_dashboard.html', member=member, total_initial=total_initial, total_membership=total_membership, details=details)
-    return "کاربر یافت نشد!"
-
 @app.route('/admin')
 def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
-    return render_template('admin.html')
+    total_balance = get_total_balance()
+    return render_template('admin.html', total_balance=total_balance)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -322,6 +318,19 @@ def members():
         return redirect(url_for('login'))
     members = Member.load_all()
     return render_template('members.html', members=members)
+
+@app.route('/user/<username>')
+def user_dashboard(username):
+    if session.get('role') != 'member' or session.get('username') != username:
+        return redirect(url_for('login'))
+    member = Member.load_by_username(username)
+    if member:
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        member.update_daily_balance(current_date)
+        total_initial, total_membership = member.calculate_totals()
+        details = member.get_daily_balances()
+        return render_template('user_dashboard.html', member=member, total_initial=total_initial, total_membership=total_membership, details=details)
+    return "کاربر یافت نشد!"
 
 @app.route('/logout')
 def logout():
