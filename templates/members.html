@@ -10,7 +10,7 @@
         footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
-        th { cursor: pointer; }
+        .search { margin-bottom: 10px; }
         .pagination { margin-top: 10px; }
         .pagination a { margin: 0 5px; }
         a.member-link { color: #4CAF50; text-decoration: none; }
@@ -23,6 +23,11 @@
     </header>
     <div class="container">
         <h1>لیست تمام اعضا</h1>
+        <div class="search">
+            <input type="text" id="searchName" placeholder="جستجوی نام" onkeyup="searchTable(0)">
+            <input type="text" id="searchJoinDate" placeholder="جستجوی تاریخ عضویت" onkeyup="searchTable(1)">
+            <input type="text" id="searchCapital" placeholder="جستجوی سرمایه اولیه" onkeyup="searchTable(2)">
+        </div>
         <table id="membersTable">
             <thead>
                 <tr>
@@ -76,6 +81,25 @@
                         if (switchcount == 0 && dir == "asc") {
                             dir = "desc";
                             switching = true;
+                        }
+                    }
+                }
+            }
+
+            function searchTable(column) {
+                var input, filter, table, tr, td, i, txtValue;
+                input = [document.getElementById("searchName"), document.getElementById("searchJoinDate"), document.getElementById("searchCapital")];
+                filter = input[column].value.toLowerCase();
+                table = document.getElementById("membersTable");
+                tr = table.getElementsByTagName("tr");
+                for (i = 1; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName("td")[column];
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
                         }
                     }
                 }
