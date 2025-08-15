@@ -14,7 +14,8 @@ def init_db():
     try:
         c.execute('''CREATE TABLE IF NOT EXISTS members
                      (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
-                      initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0)''')
+                      initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0, 
+                      username TEXT UNIQUE, password TEXT)''')
         c.execute('''CREATE TABLE IF NOT EXISTS transactions
                      (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER UNIQUE,
                       FOREIGN KEY (member_id) REFERENCES members(id))''')
@@ -31,19 +32,32 @@ def init_db():
 init_db()
 
 class Member:
-    def __init__(self, id, name, join_date, initial_capital, current_balance, points):
+    def __init__(self, id, name, join_date, initial_capital, current_balance, points, username, password):
         self.id = id
         self.name = name
         self.join_date = join_date
         self.initial_capital = initial_capital
         self.current_balance = current_balance
         self.points = points
+        self.username = username
+        self.password = password
 
     @classmethod
     def load_by_name(cls, name):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
         c.execute("SELECT * FROM members WHERE name=?", (name,))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return cls(*row)
+        return None
+
+    @classmethod
+    def load_by_username(cls, username):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT * FROM members WHERE username=?", (username,))
         row = c.fetchone()
         conn.close()
         if row:
@@ -62,8 +76,8 @@ class Member:
     def save(self):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        c.execute("UPDATE members SET initial_capital=?, current_balance=?, points=? WHERE id=?", 
-                  (self.initial_capital, self.current_balance, self.points, self.id))
+        c.execute("UPDATE members SET initial_capital=?, current_balance=?, points=?, username=?, password=? WHERE id=?", 
+                  (self.initial_capital, self.current_balance, self.points, self.username, self.password, self.id))
         conn.commit()
         conn.close()
 
@@ -79,7 +93,7 @@ class Member:
         total_out = c.fetchone()[0] or 0
         balance = total_in - total_out
         # محاسبه امتیاز روزانه: هر ۵۰ هزار تومان = ۱ امتیاز
-        daily_points = balance // 50000  # تعداد واحدهای ۵۰ هزار تومانی
+        daily_points = balance // 50000
         # به‌روزرسانی مجموع امتیازها
         c.execute("SELECT COALESCE(SUM(daily_points), 0) FROM daily_balances WHERE member_id = ? AND date < ?", (self.id, date_str))
         prev_points = c.fetchone()[0]
@@ -127,12 +141,12 @@ class Member:
         conn.close()
         return total_initial, total_membership
 
-def add_member(name, join_date_gregorian):
+def add_member(name, join_date_gregorian, username, password):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO members (name, join_date) VALUES (?, ?)",
-                  (name, join_date_gregorian))
+        c.execute("INSERT INTO members (name, join_date, username, password) VALUES (?, ?, ?, ?)",
+                  (name, join_date_gregorian, username, password))
         conn.commit()
         return c.lastrowid
     except sqlite3.IntegrityError:
@@ -177,7 +191,7 @@ def get_transactions_by_member(member_name):
         return []
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT t.id, t.date, t.amount, t.type, t.description, t.tracking_code FROM transactions t WHERE t.member_id = ? ORDER BY t.date ASC", (member.id,))
+    c.execute("SELECT t.id, t.date, t.amount, type, t.description, t.tracking_code FROM transactions t WHERE t.member_id = ? ORDER BY t.date ASC", (member.id,))
     rows = c.fetchall()
     conn.close()
     return rows
@@ -211,28 +225,26 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username == 'admin' and password == 'admin':
-            session['role'] = 'admin'
-            return redirect(url_for('admin_panel'))
-        member = Member.load_by_name(username)
-        if member and password == 'user':
+        member = Member.load_by_username(username)
+        if member and member.password == password:
             session['role'] = 'member'
             session['username'] = username
-            return redirect(url_for('status'))
+            return redirect(url_for('user_dashboard', username=username))
         flash('لاگین ناموفق!', 'error')
     return render_template('login.html')
 
-@app.route('/status')
-def status():
-    if session.get('role') != 'member':
+@app.route('/user/<username>')
+def user_dashboard(username):
+    if session.get('role') != 'member' or session.get('username') != username:
         return redirect(url_for('login'))
-    member = Member.load_by_name(session['username'])
+    member = Member.load_by_username(username)
     if member:
         current_date = datetime.now().strftime("%Y-%m-%d")
         member.update_daily_balance(current_date)
         total_initial, total_membership = member.calculate_totals()
-        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(member.points), fund_balance=format_number(sum(m.current_balance for m in Member.load_all())), total_initial=total_initial, total_membership=total_membership)
-    return "عضو یافت نشد!"
+        details = member.get_daily_balances()
+        return render_template('user_dashboard.html', member=member, total_initial=total_initial, total_membership=total_membership, details=details)
+    return "کاربر یافت نشد!"
 
 @app.route('/admin')
 def admin_panel():
@@ -247,12 +259,14 @@ def admin_add_member():
         return redirect(url_for('login'))
     name = request.form['name']
     join_date_shamsi = request.form['join_date']
+    username = request.form['username']
+    password = request.form['password']
     try:
         join_date_gregorian = shamsi_to_gregorian(join_date_shamsi)
-        if add_member(name, join_date_gregorian):
+        if add_member(name, join_date_gregorian, username, password):
             flash('عضو اضافه شد!', 'message')
         else:
-            flash('نام تکراری است!', 'error')
+            flash('نام یا یوزرنیم تکراری است!', 'error')
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
