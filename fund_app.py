@@ -109,8 +109,8 @@ def shamsi_to_gregorian(shamsi_date):
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# تمپلیت‌ها بدون استفاده از extends
-BASE_HTML = '''
+# تمپلیت‌ها بدون فرمت %
+LOGIN_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -134,7 +134,15 @@ BASE_HTML = '''
         <img src="/logo.png" alt="لوگو صندوق" width="200">
     </header>
     <div class="container">
-        %s
+        <h1>لاگین</h1>
+        {% for message in get_flashed_messages(with_categories=true) %}
+            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+        {% endfor %}
+        <form method="post">
+            نام کاربری: <input type="text" name="username"><br>
+            پسورد: <input type="password" name="password"><br>
+            <input type="submit" value="ورود">
+        </form>
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
@@ -143,67 +151,113 @@ BASE_HTML = '''
 </html>
 '''
 
-LOGIN_HTML = '''
-<h1>لاگین</h1>
-{% for message in get_flashed_messages(with_categories=true) %}
-    {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-{% endfor %}
-<form method="post">
-    نام کاربری: <input type="text" name="username"><br>
-    پسورد: <input type="password" name="password"><br>
-    <input type="submit" value="ورود">
-</form>
-'''
-
 STATUS_HTML = '''
-<h1>وضعیت برای {{ name }}</h1>
-<p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
-<p>موجودی شما: {{ balance }} تومان</p>
-<p>امتیاز شما: {{ points }}</p>
-<a href="/logout">خروج</a>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        form { margin-bottom: 20px; }
+        .message { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/logo.png" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        <h1>وضعیت برای {{ name }}</h1>
+        <p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
+        <p>موجودی شما: {{ balance }} تومان</p>
+        <p>امتیاز شما: {{ points }}</p>
+        <a href="/logout">خروج</a>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
 '''
 
 ADMIN_HTML = '''
-{% for message in get_flashed_messages(with_categories=true) %}
-    {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-    {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
-{% endfor %}
-<h1>پنل مدیر</h1>
-<h2>ثبت کاربر جدید</h2>
-<form action="/admin/add_member" method="post">
-    نام: <input type="text" name="name"><br>
-    تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
-    <script>
-        $(document).ready(function() {
-            $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
-        });
-    </script>
-    <input type="submit" value="اضافه کن">
-</form>
-
-<h2>ثبت تراکنش</h2>
-<form action="/admin/add_transaction" method="post">
-    انتخاب کاربر: <select name="member_name">
-        {% for member in members %}
-            <option value="{{ member.name }}">{{ member.name }}</option>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        form { margin-bottom: 20px; }
+        .message { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/logo.png" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        {% for message in get_flashed_messages(with_categories=true) %}
+            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+            {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
         {% endfor %}
-    </select><br>
-    نوع تراکنش: <select name="trans_type">
-        <option value="initial">سرمایه اولیه</option>
-        <option value="membership">عضویت ماهانه</option>
-        <option value="installment">قسط وام</option>
-    </select><br>
-    مبلغ (تومان): <input type="number" name="amount"><br>
-    تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
-    توضیح: <input type="text" name="description"><br>
-    <script>
-        $(document).ready(function() {
-            $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
-        });
-    </script>
-    <input type="submit" value="ثبت">
-</form>
-<a href="/logout">خروج</a>
+        <h1>پنل مدیر</h1>
+        <h2>ثبت کاربر جدید</h2>
+        <form action="/admin/add_member" method="post">
+            نام: <input type="text" name="name"><br>
+            تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
+            <script>
+                $(document).ready(function() {
+                    $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
+                });
+            </script>
+            <input type="submit" value="اضافه کن">
+        </form>
+
+        <h2>ثبت تراکنش</h2>
+        <form action="/admin/add_transaction" method="post">
+            انتخاب کاربر: <select name="member_name">
+                {% for member in members %}
+                    <option value="{{ member.name }}">{{ member.name }}</option>
+                {% endfor %}
+            </select><br>
+            نوع تراکنش: <select name="trans_type">
+                <option value="initial">سرمایه اولیه</option>
+                <option value="membership">عضویت ماهانه</option>
+                <option value="installment">قسط وام</option>
+            </select><br>
+            مبلغ (تومان): <input type="number" name="amount"><br>
+            تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
+            توضیح: <input type="text" name="description"><br>
+            <script>
+                $(document).ready(function() {
+                    $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
+                });
+            </script>
+            <input type="submit" value="ثبت">
+        </form>
+        <a href="/logout">خروج</a>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
 '''
 
 @app.route('/', methods=['GET', 'POST'])
@@ -220,7 +274,7 @@ def login():
             session['username'] = username
             return redirect(url_for('status'))
         flash('لاگین ناموفق!', 'error')
-    return render_template_string(BASE_HTML % LOGIN_HTML)
+    return render_template_string(LOGIN_HTML)
 
 @app.route('/status')
 def status():
@@ -231,7 +285,7 @@ def status():
         current_date = datetime.now().strftime("%Y-%m-%d")
         points = member.calculate_points(current_date)
         fund_balance = sum(m.current_balance for m in Member.load_all())
-        return render_template_string(BASE_HTML % STATUS_HTML, name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
+        return render_template_string(STATUS_HTML, name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -239,7 +293,7 @@ def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     members = Member.load_all()
-    return render_template_string(BASE_HTML % ADMIN_HTML, members=members)
+    return render_template_string(ADMIN_HTML, members=members)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
