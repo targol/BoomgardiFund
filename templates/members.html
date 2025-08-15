@@ -47,6 +47,7 @@
         th:hover { background-color: #e0e0e0; }
         a.member-link { color: #4A704A; text-decoration: none; }
         a.member-link:hover { text-decoration: underline; }
+        .edit-form, .delete-form { display: inline; margin: 0 5px; }
     </style>
 </head>
 <body>
@@ -80,6 +81,7 @@
                     <th data-sort="initial_capital">مجموع سرمایه (تومان)</th>
                     <th data-sort="membership">مجموع حق عضویت (تومان)</th>
                     <th data-sort="points">مجموع امتیاز</th>
+                    <th>عملیات</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,6 +93,18 @@
                         <td>{{ total_initial | format_number }}</td>
                         <td>{{ total_membership | format_number }}</td>
                         <td>{{ member.points | format_number }}</td>
+                        <td>
+                            <form class="edit-form" method="POST" action="{{ url_for('admin_edit_member', member_id=member.id) }}">
+                                <input type="hidden" name="name" value="{{ member.name }}">
+                                <input type="hidden" name="join_date" value="{{ member.join_date }}">
+                                <input type="hidden" name="username" value="{{ member.username }}">
+                                <input type="hidden" name="password" value="{{ member.password }}">
+                                <button type="submit">ویرایش</button>
+                            </form>
+                            <form class="delete-form" method="POST" action="{{ url_for('admin_delete_member', member_id=member.id) }}">
+                                <button type="submit">حذف</button>
+                            </form>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -154,7 +168,7 @@
                 rows.forEach(row => {
                     let match = true;
                     row.querySelectorAll('td').forEach((cell, index) => {
-                        if (searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
+                        if (index < 5 && searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
                             match = false;
                         }
                     });
