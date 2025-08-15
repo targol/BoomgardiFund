@@ -3,36 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
-        form { margin-bottom: 20px; }
-        .message { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #4A704A; /* رنگی نزدیک به لوگو (سبز تیره) */
+        }
+        .login-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        .login-container img {
+            width: 150px;
+            margin-bottom: 20px;
+        }
+        .login-container h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .login-container label {
+            display: block;
+            text-align: right;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .login-container input[type="submit"] {
+            background-color: #4A704A;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .login-container input[type="submit"]:hover {
+            background-color: #3D5C3D;
+        }
+        .message {
+            margin-top: 10px;
+            color: red;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
-        <h1>لاگین</h1>
-        {% for message in get_flashed_messages(with_categories=true) %}
-            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-        {% endfor %}
-        <form method="post">
-            نام کاربری: <input type="text" name="username"><br>
-            پسورد: <input type="password" name="password"><br>
+    <div class="login-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق">
+        <h1>ورود به سیستم</h1>
+        <form method="POST" action="{{ url_for('login') }}">
+            <label for="username">یوزرنیم:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">پسورد:</label>
+            <input type="password" id="password" name="password" required>
             <input type="submit" value="ورود">
         </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="message">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
 </body>
 </html>
