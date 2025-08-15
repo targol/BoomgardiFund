@@ -109,7 +109,7 @@ def shamsi_to_gregorian(shamsi_date):
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# تمپلیت‌ها با ساختار جنیجور
+# تمپلیت‌ها بدون استفاده از extends
 BASE_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -134,7 +134,7 @@ BASE_HTML = '''
         <img src="logo.png" alt="لوگو صندوق" width="200">
     </header>
     <div class="container">
-        {% block content %}{% endblock %}
+        %s
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
@@ -144,8 +144,6 @@ BASE_HTML = '''
 '''
 
 LOGIN_HTML = '''
-{% extends "base.html" %}
-{% block content %}
 <h1>لاگین</h1>
 {% for message in get_flashed_messages(with_categories=true) %}
     {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
@@ -155,23 +153,17 @@ LOGIN_HTML = '''
     پسورد: <input type="password" name="password"><br>
     <input type="submit" value="ورود">
 </form>
-{% endblock %}
 '''
 
 STATUS_HTML = '''
-{% extends "base.html" %}
-{% block content %}
 <h1>وضعیت برای {{ name }}</h1>
 <p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
 <p>موجودی شما: {{ balance }} تومان</p>
 <p>امتیاز شما: {{ points }}</p>
 <a href="/logout">خروج</a>
-{% endblock %}
 '''
 
 ADMIN_HTML = '''
-{% extends "base.html" %}
-{% block content %}
 {% for message in get_flashed_messages(with_categories=true) %}
     {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
     {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
@@ -212,7 +204,6 @@ ADMIN_HTML = '''
     <input type="submit" value="ثبت">
 </form>
 <a href="/logout">خروج</a>
-{% endblock %}
 '''
 
 @app.route('/', methods=['GET', 'POST'])
@@ -229,7 +220,7 @@ def login():
             session['username'] = username
             return redirect(url_for('status'))
         flash('لاگین ناموفق!', 'error')
-    return render_template_string(LOGIN_HTML)
+    return render_template_string(BASE_HTML % LOGIN_HTML)
 
 @app.route('/status')
 def status():
@@ -240,7 +231,7 @@ def status():
         current_date = datetime.now().strftime("%Y-%m-%d")
         points = member.calculate_points(current_date)
         fund_balance = sum(m.current_balance for m in Member.load_all())
-        return render_template_string(STATUS_HTML, name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
+        return render_template_string(BASE_HTML % STATUS_HTML, name=member.name, balance=member.current_balance, points=points, fund_balance=fund_balance)
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -248,7 +239,7 @@ def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     members = Member.load_all()
-    return render_template_string(ADMIN_HTML, members=members)
+    return render_template_string(BASE_HTML % ADMIN_HTML, members=members)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -303,11 +294,4 @@ def admin_add_transaction():
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+@app.route('/
