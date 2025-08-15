@@ -25,16 +25,16 @@
             <thead>
                 <tr>
                     <th onclick="sortTable(0)">نام</th>
-                    <th onclick="sortTable(1)">تاریخ عضویت</th>
-                    <th onclick="sortTable(2)">سرمایه اولیه</th>
+                    <th onclick="sortTable(1)">تاریخ عضویت (شمسی)</th>
+                    <th onclick="sortTable(2)">سرمایه اولیه (تومان)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for member in members %}
                     <tr>
                         <td>{{ member.name }}</td>
-                        <td>{{ member.join_date }}</td>
-                        <td>{{ member.initial_capital }}</td>
+                        <td>{{ member.join_date | gregorian_to_shamsi }}</td>
+                        <td>{{ member.initial_capital | format_number }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
