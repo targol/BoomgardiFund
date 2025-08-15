@@ -193,7 +193,7 @@ def get_transactions_by_member(member_name):
 def get_total_balance():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT SUM(current_balance) FROM members")
+    c.execute("SELECT SUM(initial_capital) + SUM(current_balance) FROM members")
     total = c.fetchone()[0] or 0
     conn.close()
     return total
@@ -257,7 +257,7 @@ def admin_add_member():
             flash('نام یا یوزرنیم تکراری است!', 'error')
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('members'))  # ماندن توی صفحه members
 
 @app.route('/admin/add_transaction', methods=['POST'])
 def admin_add_transaction():
@@ -267,25 +267,25 @@ def admin_add_transaction():
     member = Member.load_by_name(member_name)
     if not member:
         flash('عضو یافت نشد!', 'error')
-        return redirect(url_for('admin_panel'))
+        return redirect(url_for('transactions'))
     trans_type = request.form['trans_type']
     try:
         amount = int(request.form['amount'])
         tracking_code = int(request.form['tracking_code'])
     except ValueError:
         flash('مبلغ یا کد رهگیری نامعتبر است!', 'error')
-        return redirect(url_for('admin_panel'))
+        return redirect(url_for('transactions'))
     date_shamsi = request.form['date']
     description = request.form['description']
 
     if trans_type == 'initial':
         if amount < 5000000 or amount % 5000000 != 0:
             flash('سرمایه اولیه باید حداقل ۵ میلیون و مضرب ۵ میلیون باشد!', 'error')
-            return redirect(url_for('admin_panel'))
+            return redirect(url_for('transactions'))
     elif trans_type == 'membership':
         if amount % 250000 != 0:
             flash('عضویت ماهانه باید مضرب ۲۵۰ هزار تومان باشد!', 'error')
-            return redirect(url_for('admin_panel'))
+            return redirect(url_for('transactions'))
 
     try:
         date_gregorian = shamsi_to_gregorian(date_shamsi)
@@ -300,7 +300,7 @@ def admin_add_transaction():
         flash('تراکنش با کد رهگیری ثبت شد!', 'message')
     except ValueError as e:
         flash(str(e), 'error')
-    return redirect(url_for('admin_panel'))
+    return redirect(url_for('transactions'))  # ماندن توی صفحه transactions
 
 @app.route('/transactions')
 def transactions():
