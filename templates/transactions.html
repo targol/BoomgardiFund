@@ -23,7 +23,7 @@
         <div class="search">
             <input type="text" id="searchName" placeholder="جستجوی نام" onkeyup="searchTable(0)">
             <input type="text" id="searchAmount" placeholder="جستجوی مبلغ" onkeyup="searchTable(1)">
-            <input type="text" id="searchType" placeholder="جستجوی نوع" onkeyup="searchTable(2)">
+            <input type="text" id="searchType" placeholder="جستجوی نوع واریز" onkeyup="searchTable(2)">
             <input type="text" id="searchDate" placeholder="جستجوی تاریخ" onkeyup="searchTable(3)">
             <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری" onkeyup="searchTable(4)">
         </div>
@@ -42,7 +42,12 @@
                     <tr>
                         <td>{{ trans[1] }}</td>
                         <td>{{ trans[3] | format_number }}</td>
-                        <td>{{ trans[4] }}</td>
+                        <td>
+                            {% if trans[4] == 'initial' %}سرمایه اولیه
+                            {% elif trans[4] == 'membership' %}عضویت ماهانه
+                            {% elif trans[4] == 'installment' %}قسط وام
+                            {% endif %}
+                        </td>
                         <td>{{ trans[2] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[6] }}</td>
                     </tr>
