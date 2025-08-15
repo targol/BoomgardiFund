@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        .summary { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        <h1>پنل کاربری {{ member.name }}</h1>
+        <div class="summary">
+            <p>مجموع سرمایه: {{ total_initial | format_number }} تومان</p>
+            <p>مجموع حق عضویت: {{ total_membership | format_number }} تومان</p>
+            <p>امتیاز کل: {{ member.points | format_number }}</p>
+        </div>
+        <h2>جزییات امتیازات</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>تاریخ شمسی</th>
+                    <th>موجودی صندوق (تومان)</th>
+                    <th>امتیاز روزانه</th>
+                    <th>امتیاز کل</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in details %}
+                    <tr>
+                        <td>{{ detail[0] }}</td>
+                        <td>{{ detail[1] | format_number }}</td>
+                        <td>{{ detail[2] | format_number }}</td>
+                        <td>{{ detail[3] | format_number }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{ url_for('logout') }}">خروج</a>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
