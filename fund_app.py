@@ -92,6 +92,16 @@ class Member:
         conn.close()
         return [(gregorian_to_shamsi(row[0]), row[1], row[2], row[3]) for row in rows]
 
+    def calculate_totals(self):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND type = 'initial'", (self.id,))
+        total_initial = c.fetchone()[0] or 0
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND type = 'membership'", (self.id,))
+        total_membership = c.fetchone()[0] or 0
+        conn.close()
+        return total_initial, total_membership
+
 def add_member(name, join_date_gregorian):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -195,7 +205,8 @@ def status():
     if member:
         current_date = datetime.now().strftime("%Y-%m-%d")
         member.update_daily_balance(current_date)
-        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(member.points), fund_balance=format_number(sum(m.current_balance for m in Member.load_all())))
+        total_initial, total_membership = member.calculate_totals()
+        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(member.points), fund_balance=format_number(sum(m.current_balance for m in Member.load_all())), total_initial=total_initial, total_membership=total_membership)
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -253,7 +264,13 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        member.update_daily_balance(date_gregorian)  # آپدیت تاریخچه با تاریخ تراکنش
+        # به‌روزرسانی تاریخچه از تاریخ عضویت تا امروز
+        start_date = max(datetime.strptime(member.join_date, "%Y-%m-%d"), datetime.strptime(date_gregorian, "%Y-%m-%d"))
+        current_date = start_date
+        end_date = datetime.now()
+        while current_date <= end_date:
+            member.update_daily_balance(current_date.strftime("%Y-%m-%d"))
+            current_date += timedelta(days=1)
         flash('تراکنش با کد رهگیری ثبت شد!', 'message')
     except ValueError as e:
         flash(str(e), 'error')
@@ -287,7 +304,30 @@ def details(member_name):
     member = Member.load_by_name(member_name)
     if not member:
         return "عضو یافت نشد!"
-    details = member.get_daily_balances()
+    # محاسبه تاریخچه کامل از تاریخ عضویت تا امروز
+    start_date = datetime.strptime(member.join_date, "%Y-%m-%d")
+    current_date = start_date
+    end_date = datetime.now()
+    details = []
+    total_points = 0
+    while current_date <= end_date:
+        date_str = current_date.strftime("%Y-%m-%d")
+        shamsi_date = gregorian_to_shamsi(date_str)
+        # محاسبه موجودی بر اساس تراکنش‌ها تا آن تاریخ
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type IN ('initial', 'membership')",
+                  (member.id, date_str))
+        total_in = c.fetchone()[0] or 0
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type = 'installment'",
+                  (member.id, date_str))
+        total_out = c.fetchone()[0] or 0
+        conn.close()
+        balance = total_in - total_out
+        daily_points = balance // 50000
+        total_points += daily_points
+        details.append((shamsi_date, balance, daily_points, total_points))
+        current_date += timedelta(days=1)
     return render_template('details.html', details=details, member_name=member_name)
 
 @app.route('/members')
