@@ -84,7 +84,6 @@ class Member:
     def update_daily_balance(self, date_str):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        # محاسبه موجودی تا تاریخ مشخص
         c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type IN ('initial', 'membership')",
                   (self.id, date_str))
         total_in = c.fetchone()[0] or 0
@@ -92,9 +91,7 @@ class Member:
                   (self.id, date_str))
         total_out = c.fetchone()[0] or 0
         balance = total_in - total_out
-        # محاسبه امتیاز روزانه: هر ۵۰ هزار تومان = ۱ امتیاز
         daily_points = balance // 50000
-        # به‌روزرسانی مجموع امتیازها
         c.execute("SELECT COALESCE(SUM(daily_points), 0) FROM daily_balances WHERE member_id = ? AND date < ?", (self.id, date_str))
         prev_points = c.fetchone()[0]
         total_points = prev_points + daily_points
@@ -102,7 +99,7 @@ class Member:
             c.execute("INSERT OR REPLACE INTO daily_balances (member_id, date, balance, daily_points, total_points) VALUES (?, ?, ?, ?, ?)",
                       (self.id, date_str, balance, daily_points, total_points))
             conn.commit()
-            self.points = total_points  # به‌روزرسانی امتیاز کل توی دیتابیس
+            self.points = total_points
             self.save()
         except sqlite3.Error as e:
             print(f"خطا در آپدیت تاریخچه: {e}")
@@ -113,19 +110,16 @@ class Member:
     def get_daily_balances(self):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        # گرفتن اولین تاریخ تراکنش
         c.execute("SELECT MIN(date) FROM transactions WHERE member_id = ?", (self.id,))
         first_transaction_date = c.fetchone()[0]
         start_date = max(datetime.strptime(self.join_date, "%Y-%m-%d"), 
                         datetime.strptime(first_transaction_date or self.join_date, "%Y-%m-%d") if first_transaction_date else datetime.strptime(self.join_date, "%Y-%m-%d"))
         current_date = start_date
         end_date = datetime.now()
-        details = []
         while current_date <= end_date:
             date_str = current_date.strftime("%Y-%m-%d")
-            self.update_daily_balance(date_str)  # اطمینان از به‌روزرسانی روزانه
+            self.update_daily_balance(date_str)
             current_date += timedelta(days=1)
-        # گرفتن داده‌ها از دیتابیس و مرتب‌سازی برعکس (از امروز به عقب)
         c.execute("SELECT date, balance, daily_points, total_points FROM daily_balances WHERE member_id = ? ORDER BY date DESC", (self.id,))
         rows = c.fetchall()
         conn.close()
@@ -196,13 +190,11 @@ def get_transactions_by_member(member_name):
     conn.close()
     return rows
 
-# تبدیل تاریخ شمسی به میلادی
 def shamsi_to_gregorian(shamsi_date):
     year, month, day = map(int, shamsi_date.split('-'))
     jd = jdate(year, month, day)
     return jd.togregorian().strftime("%Y-%m-%d")
 
-# تبدیل تاریخ میلادی به شمسی
 def gregorian_to_shamsi(date_str):
     if date_str:
         dt = datetime.strptime(date_str, "%Y-%m-%d")
@@ -210,11 +202,9 @@ def gregorian_to_shamsi(date_str):
         return jd.strftime("%Y-%m-%d")
     return ""
 
-# تبدیل اعداد به فرمت هزارتایی
 def format_number(number):
     return "{:,.0f}".format(number).replace(",", ".")
 
-# اپ Flask
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = secrets.token_hex(16)
 app.jinja_env.filters['format_number'] = format_number
@@ -225,11 +215,9 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        # ورود ادمین با admin/admin
         if username == 'admin' and password == 'admin':
             session['role'] = 'admin'
             return redirect(url_for('admin_panel'))
-        # ورود کاربران عادی
         member = Member.load_by_username(username)
         if member and member.password == password:
             session['role'] = 'member'
@@ -255,8 +243,7 @@ def user_dashboard(username):
 def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
-    members = Member.load_all()
-    return render_template('admin.html', members=members)
+    return render_template('admin.html')
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -308,7 +295,6 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        # به‌روزرسانی تاریخچه از تاریخ تراکنش تا امروز
         start_date = datetime.strptime(date_gregorian, "%Y-%m-%d")
         current_date = start_date
         end_date = datetime.now()
@@ -329,27 +315,6 @@ def transactions():
     membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
     total = initial_total + membership_total
     return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total)
-
-@app.route('/transactions/<member_name>')
-def transactions_member(member_name):
-    if session.get('role') != 'admin':
-        return redirect(url_for('login'))
-    transactions = get_transactions_by_member(member_name)
-    member = Member.load_by_name(member_name)
-    initial_total = sum(t[2] for t in transactions if t[3] == 'initial')
-    membership_total = sum(t[2] for t in transactions if t[3] == 'membership')
-    total = initial_total + membership_total
-    return render_template('transactions_member.html', transactions=transactions, member_name=member_name, initial_total=initial_total, membership_total=membership_total, total=total)
-
-@app.route('/details/<member_name>')
-def details(member_name):
-    if session.get('role') != 'admin':
-        return redirect(url_for('login'))
-    member = Member.load_by_name(member_name)
-    if not member:
-        return "عضو یافت نشد!"
-    details = member.get_daily_balances()
-    return render_template('details.html', details=details, member_name=member_name)
 
 @app.route('/members')
 def members():
