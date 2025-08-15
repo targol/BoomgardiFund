@@ -99,7 +99,7 @@ class Member:
                   (self.id, date_str))
         total_out = c.fetchone()[0] or 0
         balance = total_in - total_out
-        daily_points = balance // 50000
+        daily_points = balance // 500000
         c.execute("SELECT COALESCE(SUM(daily_points), 0) FROM daily_balances WHERE member_id = ? AND date < ?", (self.id, date_str))
         prev_points = c.fetchone()[0]
         total_points = prev_points + daily_points
