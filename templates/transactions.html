@@ -60,6 +60,11 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
+        </div>
         <form method="POST" action="{{ url_for('admin_add_transaction') }}">
             <label for="member_name">نام عضو:</label>
             <select id="member_name" name="member_name" required>
@@ -115,14 +120,11 @@
                 {% endfor %}
             </tbody>
         </table>
-        <div class="summary">
-            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
-            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
-            <p>جمع کل: {{ total | format_number }} تومان</p>
-        </div>
+        
        
     </div>
 </body>
 </html>
+
 
 
