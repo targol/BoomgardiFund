@@ -78,10 +78,9 @@ class Member:
                   (self.id, date_str))
         total_out = c.fetchone()[0] or 0
         balance = total_in - total_out
-        daily_points = balance // 50000
+        # محاسبه امتیاز روزانه: هر ۵۰ هزار تومان = ۱ امتیاز
+        daily_points = balance // 50000  # تعداد واحدهای ۵۰ هزار تومانی
         # به‌روزرسانی مجموع امتیازها
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
         c.execute("SELECT COALESCE(SUM(daily_points), 0) FROM daily_balances WHERE member_id = ? AND date < ?", (self.id, date_str))
         prev_points = c.fetchone()[0]
         total_points = prev_points + daily_points
@@ -290,7 +289,7 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        # به‌روزرسانی تاریخچه از اولین تراکنش یا عضویت تا امروز
+        # به‌روزرسانی تاریخچه از تاریخ تراکنش تا امروز
         start_date = datetime.strptime(date_gregorian, "%Y-%m-%d")
         current_date = start_date
         end_date = datetime.now()
