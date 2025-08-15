@@ -98,7 +98,11 @@
         </div>
         <form method="POST" action="{{ url_for('admin_add_transaction') }}">
             <label for="member_name">نام عضو:</label>
-            <input type="text" id="member_name" name="member_name" required>
+            <select id="member_name" name="member_name" required>
+                {% for name in member_names %}
+                    <option value="{{ name }}">{{ name }}</option>
+                {% endfor %}
+            </select>
             <label for="trans_type">نوع تراکنش:</label>
             <select id="trans_type" name="trans_type" required>
                 <option value="initial">سرمایه اولیه</option>
