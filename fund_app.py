@@ -206,4 +206,6 @@ if __name__ == "__main__":
     # مثال: اگر دیتابیس خالی باشه، یک عضو اضافه کن
     if len(Member.load_all()) == 0:
         add_member("علی", 1000000, "2025-01-01")
-    app.run(debug=True)
+    import os
+port = int(os.environ.get("PORT", 5000))  # پورت رو از محیط می‌گیره، پیش‌فرض 5000
+app.run(host='0.0.0.0', port=port, debug=True)
