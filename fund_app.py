@@ -100,6 +100,7 @@ class Member:
                       (self.id, date_str, balance, daily_points, total_points))
             conn.commit()
             self.points = total_points
+            self.current_balance = balance  # به‌روزرسانی موجودی جاری
             self.save()
         except sqlite3.Error as e:
             print(f"خطا در آپدیت تاریخچه: {e}")
@@ -193,10 +194,18 @@ def get_transactions_by_member(member_name):
 def get_total_balance():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT SUM(initial_capital) + SUM(current_balance) FROM members")
+    c.execute("SELECT SUM(initial_capital + current_balance) FROM members")
     total = c.fetchone()[0] or 0
     conn.close()
     return total
+
+def get_all_member_names():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT name FROM members ORDER BY name ASC")
+    names = [row[0] for row in c.fetchall()]
+    conn.close()
+    return names
 
 def shamsi_to_gregorian(shamsi_date):
     year, month, day = map(int, shamsi_date.split('-'))
@@ -236,14 +245,14 @@ def login():
 
 @app.route('/admin')
 def admin_panel():
-    if session.get('role') != 'admin':
+    if 'role' not in session:
         return redirect(url_for('login'))
     total_balance = get_total_balance()
     return render_template('admin.html', total_balance=total_balance)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
-    if session.get('role') != 'admin':
+    if 'role' not in session:
         return redirect(url_for('login'))
     name = request.form['name']
     join_date_shamsi = request.form['join_date']
@@ -257,11 +266,11 @@ def admin_add_member():
             flash('نام یا یوزرنیم تکراری است!', 'error')
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
-    return redirect(url_for('members'))  # ماندن توی صفحه members
+    return redirect(url_for('members'))
 
 @app.route('/admin/add_transaction', methods=['POST'])
 def admin_add_transaction():
-    if session.get('role') != 'admin':
+    if 'role' not in session:
         return redirect(url_for('login'))
     member_name = request.form['member_name']
     member = Member.load_by_name(member_name)
@@ -300,28 +309,29 @@ def admin_add_transaction():
         flash('تراکنش با کد رهگیری ثبت شد!', 'message')
     except ValueError as e:
         flash(str(e), 'error')
-    return redirect(url_for('transactions'))  # ماندن توی صفحه transactions
+    return redirect(url_for('transactions'))
 
 @app.route('/transactions')
 def transactions():
-    if session.get('role') != 'admin':
+    if 'role' not in session:
         return redirect(url_for('login'))
     transactions = get_all_transactions()
     initial_total = sum(t[3] for t in transactions if t[4] == 'initial')
     membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
     total = initial_total + membership_total
-    return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total)
+    member_names = get_all_member_names()
+    return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total, member_names=member_names)
 
 @app.route('/members')
 def members():
-    if session.get('role') != 'admin':
+    if 'role' not in session:
         return redirect(url_for('login'))
     members = Member.load_all()
     return render_template('members.html', members=members)
 
 @app.route('/user/<username>')
 def user_dashboard(username):
-    if session.get('role') != 'member' or session.get('username') != username:
+    if 'role' not in session or (session.get('role') == 'member' and session.get('username') != username):
         return redirect(url_for('login'))
     member = Member.load_by_username(username)
     if member:
