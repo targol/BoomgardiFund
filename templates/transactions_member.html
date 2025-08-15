@@ -12,6 +12,7 @@
         th, td { border: 1px solid #ddd; padding: 8px; }
         .search { margin-bottom: 10px; }
         .summary { margin-top: 20px; font-weight: bold; }
+        .details-link { margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
@@ -24,7 +25,7 @@
             <input type="text" id="searchId" placeholder="جستجوی شناسه" onkeyup="searchTable(0)">
             <input type="text" id="searchDate" placeholder="جستجوی تاریخ" onkeyup="searchTable(1)">
             <input type="text" id="searchAmount" placeholder="جستجوی مبلغ" onkeyup="searchTable(2)">
-            <input type="text" id="searchType" placeholder="جستجوی نوع" onkeyup="searchTable(3)">
+            <input type="text" id="searchType" placeholder="جستجوی نوع واریز" onkeyup="searchTable(3)">
             <input type="text" id="searchDesc" placeholder="جستجوی توضیح" onkeyup="searchTable(4)">
             <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری" onkeyup="searchTable(5)">
         </div>
@@ -45,7 +46,12 @@
                         <td>{{ trans[0] }}</td>
                         <td>{{ trans[1] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[2] | format_number }}</td>
-                        <td>{{ trans[3] }}</td>
+                        <td>
+                            {% if trans[3] == 'initial' %}سرمایه اولیه
+                            {% elif trans[3] == 'membership' %}عضویت ماهانه
+                            {% elif trans[3] == 'installment' %}قسط وام
+                            {% endif %}
+                        </td>
                         <td>{{ trans[4] }}</td>
                         <td>{{ trans[5] }}</td>
                     </tr>
@@ -114,6 +120,7 @@
         </div>
         <a href="/admin">بازگشت به پنل ادمین</a>
         <a href="/members">بازگشت به لیست اعضا</a>
+        <a href="{{ url_for('details', member_name=member_name) }}" class="details-link">جزییات امتیازات</a>
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
