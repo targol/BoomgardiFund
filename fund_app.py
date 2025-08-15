@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 import os
-from flask import Flask, request, render_template_string, redirect, url_for, session
+from flask import Flask, request, render_template_string, redirect, url_for, session, flash, get_flashed_messages
 import secrets
 from jdatetime import date as jdate  # برای تبدیل شمسی به میلادی
 
@@ -109,8 +109,41 @@ def shamsi_to_gregorian(shamsi_date):
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# تمپلیت‌ها با CDN برای Persian Datepicker
-LOGIN_HTML = '''
+# تمپلیت‌ها با استایل جدید
+BASE_HTML = '''
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        form { margin-bottom: 20px; }
+        .message { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="logo.png" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        %s
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
+'''
+
+LOGIN_HTML = BASE_HTML % '''
 <h1>لاگین</h1>
 <form method="post">
     نام کاربری: <input type="text" name="username"><br>
@@ -119,7 +152,7 @@ LOGIN_HTML = '''
 </form>
 '''
 
-STATUS_HTML = '''
+STATUS_HTML = BASE_HTML % '''
 <h1>وضعیت برای {{ name }}</h1>
 <p>موجودی صندوق کلی: {{ fund_balance }} تومان</p>
 <p>موجودی شما: {{ balance }} تومان</p>
@@ -128,16 +161,21 @@ STATUS_HTML = '''
 '''
 
 ADMIN_HTML = '''
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+{% for message in get_flashed_messages(with_categories=true) %}
+    {% if message[0] == 'error' %}
+        <p class="error">{{ message[1] }}</p>
+    {% else %}
+        <p class="message">{{ message[1] }}</p>
+    {% endif %}
+{% endfor %}
 <h1>پنل مدیر</h1>
 <h2>ثبت کاربر جدید</h2>
 <form action="/admin/add_member" method="post">
     نام: <input type="text" name="name"><br>
-    تاریخ عضویت (شمسی YYYY-MM-DD): <input type="text" id="join_date" name="join_date"><br>
+    تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
     <script>
         $(document).ready(function() {
-            $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', toolbox: {calendarSwitch: {enabled: false}}});
+            $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
         });
     </script>
     <input type="submit" value="اضافه کن">
@@ -156,11 +194,11 @@ ADMIN_HTML = '''
         <option value="installment">قسط وام</option>
     </select><br>
     مبلغ (تومان): <input type="number" name="amount"><br>
-    تاریخ (شمسی YYYY-MM-DD): <input type="text" id="trans_date" name="date"><br>
+    تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
     توضیح: <input type="text" name="description"><br>
     <script>
         $(document).ready(function() {
-            $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', toolbox: {calendarSwitch: {enabled: false}}});
+            $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
         });
     </script>
     <input type="submit" value="ثبت">
@@ -181,8 +219,8 @@ def login():
             session['role'] = 'member'
             session['username'] = username
             return redirect(url_for('status'))
-        return "لاگین ناموفق!"
-    return LOGIN_HTML
+        flash('لاگین ناموفق!', 'error')
+    return render_template_string(LOGIN_HTML)
 
 @app.route('/status')
 def status():
@@ -201,7 +239,7 @@ def admin_panel():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     members = Member.load_all()
-    return render_template_string(ADMIN_HTML, members=members)
+    return render_template_string(BASE_HTML % ADMIN_HTML, members=members)
 
 @app.route('/admin/add_member', methods=['POST'])
 def admin_add_member():
@@ -212,10 +250,12 @@ def admin_add_member():
     try:
         join_date_gregorian = shamsi_to_gregorian(join_date_shamsi)
         if add_member(name, join_date_gregorian):
-            return "عضو اضافه شد!"
-        return "نام تکراری است!"
+            flash('عضو اضافه شد!')
+        else:
+            flash('نام تکراری است!', 'error')
     except ValueError:
-        return "تاریخ شمسی نامعتبر!"
+        flash('تاریخ شمسی نامعتبر!', 'error')
+    return redirect(url_for('admin_panel'))
 
 @app.route('/admin/add_transaction', methods=['POST'])
 def admin_add_transaction():
@@ -224,28 +264,35 @@ def admin_add_transaction():
     member_name = request.form['member_name']
     member = Member.load_by_name(member_name)
     if not member:
-        return "عضو یافت نشد!"
+        flash('عضو یافت نشد!', 'error')
+        return redirect(url_for('admin_panel'))
     trans_type = request.form['trans_type']
-    amount = int(request.form['amount'])
+    try:
+        amount = int(request.form['amount'])
+    except ValueError:
+        flash('مبلغ نامعتبر!', 'error')
+        return redirect(url_for('admin_panel'))
     date_shamsi = request.form['date']
     description = request.form['description']
 
     # اعتبارسنجی مبلغ
     if trans_type == 'initial':
         if amount < 5000000 or amount % 5000000 != 0:
-            return "سرمایه اولیه باید حداقل ۵ میلیون و مضرب ۵ میلیون باشد!"
+            flash('سرمایه اولیه باید حداقل ۵ میلیون و مضرب ۵ میلیون باشد!', 'error')
+            return redirect(url_for('admin_panel'))
     elif trans_type == 'membership':
         if amount % 250000 != 0:
-            return "عضویت ماهانه باید مضرب ۲۵۰ هزار تومان باشد!"
-    # برای قسط وام، بدون شرط خاص
+            flash('عضویت ماهانه باید مضرب ۲۵۰ هزار تومان باشد!', 'error')
+            return redirect(url_for('admin_panel'))
 
     try:
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description)
         update_balance(member.id, amount, trans_type)
-        return "تراکنش ثبت شد!"
+        flash('تراکنش ثبت شد!')
     except ValueError:
-        return "تاریخ شمسی نامعتبر!"
+        flash('تاریخ شمسی نامعتبر!', 'error')
+    return redirect(url_for('admin_panel'))
 
 @app.route('/logout')
 def logout():
