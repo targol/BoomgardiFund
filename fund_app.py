@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 import os
-from flask import Flask, request, render_template_string, redirect, url_for, session, flash, get_flashed_messages
+from flask import Flask, request, render_template_string, redirect, url_for, session, flash, get_flashed_messages, send_from_directory
 import secrets
 from jdatetime import date as jdate  # برای تبدیل شمسی به میلادی
 
@@ -45,7 +45,7 @@ class Member:
     def load_all(cls):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        c.execute("SELECT * FROM members")
+        c.execute("SELECT * FROM members ORDER BY join_date ASC")
         rows = c.fetchall()
         conn.close()
         return [cls(*row) for row in rows]
@@ -109,7 +109,12 @@ def shamsi_to_gregorian(shamsi_date):
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# تمپلیت‌ها بدون فرمت %
+# سرو فایل‌های استاتیک مثل لوگو
+@app.route('/logo.png')
+def serve_logo():
+    return send_from_directory(os.getcwd(), 'logo.png')
+
+# تمپلیت لاگین
 LOGIN_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -117,7 +122,7 @@ LOGIN_HTML = '''
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
@@ -151,6 +156,7 @@ LOGIN_HTML = '''
 </html>
 '''
 
+# تمپلیت وضعیت
 STATUS_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -158,7 +164,7 @@ STATUS_HTML = '''
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
@@ -188,6 +194,7 @@ STATUS_HTML = '''
 </html>
 '''
 
+# تمپلیت پنل مدیر با دو ستون و لیست اعضا
 ADMIN_HTML = '''
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -195,16 +202,21 @@ ADMIN_HTML = '''
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <style>
         body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
         header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
         form { margin-bottom: 20px; }
         .message { color: green; font-weight: bold; }
         .error { color: red; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { cursor: pointer; }
+        .pagination { margin-top: 10px; }
+        .pagination a { margin: 0 5px; }
     </style>
 </head>
 <body>
@@ -212,46 +224,121 @@ ADMIN_HTML = '''
         <img src="/logo.png" alt="لوگو صندوق" width="200">
     </header>
     <div class="container">
-        {% for message in get_flashed_messages(with_categories=true) %}
-            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
-            {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
-        {% endfor %}
-        <h1>پنل مدیر</h1>
-        <h2>ثبت کاربر جدید</h2>
-        <form action="/admin/add_member" method="post">
-            نام: <input type="text" name="name"><br>
-            تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
+        <div class="left-column">
+            {% for message in get_flashed_messages(with_categories=true) %}
+                {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+                {% if message[0] == 'message' %}<p class="message">{{ message[1] }}</p>{% endif %}
+            {% endfor %}
+            <h2>ثبت کاربر جدید</h2>
+            <form action="/admin/add_member" method="post">
+                نام: <input type="text" name="name"><br>
+                تاریخ عضویت (شمسی): <input type="text" id="join_date" name="join_date"><br>
+                <script>
+                    $(document).ready(function() {
+                        $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date(), viewMode: 'days'});
+                    });
+                </script>
+                <input type="submit" value="اضافه کن">
+            </form>
+            <h2>لیست اعضا</h2>
+            <table id="membersTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">نام</th>
+                        <th onclick="sortTable(1)">تاریخ عضویت</th>
+                        <th onclick="sortTable(2)">سرمایه اولیه</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                        <tr>
+                            <td>{{ member.name }}</td>
+                            <td>{{ member.join_date }}</td>
+                            <td>{{ member.initial_capital }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="pagination">
+                <a href="#" onclick="showPage(1)">1</a>
+                <a href="#" onclick="showPage(2)">2</a>
+                <!-- اضافه کن بر اساس تعداد -->
+            </div>
             <script>
-                $(document).ready(function() {
-                    $("#join_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
-                });
-            </script>
-            <input type="submit" value="اضافه کن">
-        </form>
+                function sortTable(n) {
+                    var table = document.getElementById("membersTable");
+                    var rows, switching, i, x, y, shouldSwitch, dir = "asc";
+                    switching = true;
+                    while (switching) {
+                        switching = false;
+                        rows = table.rows;
+                        for (i = 1; i < (rows.length - 1); i++) {
+                            shouldSwitch = false;
+                            x = rows[i].getElementsByTagName("TD")[n];
+                            y = rows[i + 1].getElementsByTagName("TD")[n];
+                            if (dir == "asc") {
+                                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                    shouldSwitch = true;
+                                    break;
+                                }
+                            } else if (dir == "desc") {
+                                if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                    shouldSwitch = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (shouldSwitch) {
+                            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                            switching = true;
+                            switchcount++; 
+                        } else {
+                            if (switchcount == 0 && dir == "asc") {
+                                dir = "desc";
+                                switching = true;
+                            }
+                        }
+                    }
+                }
 
-        <h2>ثبت تراکنش</h2>
-        <form action="/admin/add_transaction" method="post">
-            انتخاب کاربر: <select name="member_name">
-                {% for member in members %}
-                    <option value="{{ member.name }}">{{ member.name }}</option>
-                {% endfor %}
-            </select><br>
-            نوع تراکنش: <select name="trans_type">
-                <option value="initial">سرمایه اولیه</option>
-                <option value="membership">عضویت ماهانه</option>
-                <option value="installment">قسط وام</option>
-            </select><br>
-            مبلغ (تومان): <input type="number" name="amount"><br>
-            تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
-            توضیح: <input type="text" name="description"><br>
-            <script>
-                $(document).ready(function() {
-                    $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date()});
-                });
+                function showPage(page) {
+                    var rows = document.getElementById("membersTable").rows;
+                    for (var i = 1; i < rows.length; i++) {
+                        rows[i].style.display = "none";
+                    }
+                    var start = (page - 1) * 10 + 1;
+                    var end = start + 9;
+                    for (var i = start; i <= end && i < rows.length; i++) {
+                        rows[i].style.display = "";
+                    }
+                }
+                showPage(1);  // شروع با صفحه اول
             </script>
-            <input type="submit" value="ثبت">
-        </form>
-        <a href="/logout">خروج</a>
+        </div>
+        <div class="right-column">
+            <h2>ثبت تراکنش</h2>
+            <form action="/admin/add_transaction" method="post">
+                انتخاب کاربر: <select name="member_name">
+                    {% for member in members %}
+                        <option value="{{ member.name }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select><br>
+                نوع تراکنش: <select name="trans_type">
+                    <option value="initial">سرمایه اولیه</option>
+                    <option value="membership">عضویت ماهانه</option>
+                    <option value="installment">قسط وام</option>
+                </select><br>
+                مبلغ (تومان): <input type="number" name="amount"><br>
+                تاریخ (شمسی): <input type="text" id="trans_date" name="date"><br>
+                توضیح: <input type="text" name="description"><br>
+                <script>
+                    $(document).ready(function() {
+                        $("#trans_date").persianDatepicker({format: 'YYYY-MM-DD', maxDate: new Date(), viewMode: 'days'});
+                    });
+                </script>
+                <input type="submit" value="ثبت">
+            </form>
+        </div>
     </div>
     <footer>
         اطلاعات فوتر: تماس با ما - نسخه 1.0
@@ -354,5 +441,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # پورت رو با لگ‌ها تنظیم کردم
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=True)
