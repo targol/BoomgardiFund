@@ -82,4 +82,175 @@
             <thead>
                 <tr>
                     <th data-sort="id">شناسه</th>
-                   
+                    <th data-sort="name">نام</th>
+                    <th data-sort="date">تاریخ (شمسی)</th>
+                    <th data-sort="amount">مبلغ (تومان)</th>
+                    <th data-sort="type">نوع</th>
+                    <th data-sort="description">توضیحات</th>
+                    <th data-sort="tracking_code">کد رهگیری</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trans in transactions %}
+                    <tr>
+                        <td>{{ trans[0] }}</td>
+                        <td><a href="{{ url_for('user_dashboard', username=(members|selectattr('name', 'equalto', trans[1])|first.username if members|selectattr('name', 'equalto', trans[1])|first else '') }}" class="member-link">{{ trans[1] }}</a></td>
+                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
+                        <td>{{ trans[3] | format_number }}</td>
+                        <td>
+                            {% if trans[4] == 'initial' %}سرمایه اولیه
+                            {% elif trans[4] == 'membership' %}عضویت ماهانه
+                            {% elif trans[4] == 'installment' %}قسط وام
+                            {% endif %}
+                        </td>
+                        <td>{{ trans[5] }}</td>
+                        <td>{{ trans[6] }}</td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm edit-btn" data-bs-toggle="modal" data-bs-target="#editModal{{ trans[0] }}" data-id="{{ trans[0] }}" data-member-name="{{ trans[1] }}" data-date="{{ trans[2] }}" data-amount="{{ trans[3] }}" data-type="{{ trans[4] }}" data-description="{{ trans[5] }}" data-tracking-code="{{ trans[6] }}">ویرایش</button>
+                            <form class="delete-form" method="POST" action="{{ url_for('admin_delete_transaction', transaction_id=trans[0]) }}">
+                                <button type="submit" class="btn btn-danger btn-sm">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <!-- Modal -->
+                    <div class="modal fade" id="editModal{{ trans[0] }}" tabindex="-1" aria-labelledby="editModalLabel{{ trans[0] }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="editModalLabel{{ trans[0] }}">ویرایش تراکنش: {{ trans[0] }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form method="POST" action="{{ url_for('admin_edit_transaction', transaction_id=trans[0]) }}">
+                                        <div class="mb-3">
+                                            <label for="edit_member_name_{{ trans[0] }}" class="form-label">نام عضو:</label>
+                                            <select class="form-control" id="edit_member_name_{{ trans[0] }}" name="member_name" required>
+                                                {% for name in member_names %}
+                                                    <option value="{{ name }}" {% if name == trans[1] %}selected{% endif %}>{{ name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit_date_{{ trans[0] }}" class="form-label">تاریخ (شمسی):</label>
+                                            <input type="text" class="form-control" id="edit_date_{{ trans[0] }}" name="date" value="{{ trans[2] | gregorian_to_shamsi }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit_amount_{{ trans[0] }}" class="form-label">مبلغ (تومان):</label>
+                                            <input type="number" class="form-control" id="edit_amount_{{ trans[0] }}" name="amount" value="{{ trans[3] }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit_trans_type_{{ trans[0] }}" class="form-label">نوع تراکنش:</label>
+                                            <select class="form-control" id="edit_trans_type_{{ trans[0] }}" name="trans_type" required>
+                                                <option value="initial" {% if trans[4] == 'initial' %}selected{% endif %}>سرمایه اولیه</option>
+                                                <option value="membership" {% if trans[4] == 'membership' %}selected{% endif %}>عضویت ماهانه</option>
+                                                <option value="installment" {% if trans[4] == 'installment' %}selected{% endif %}>قسط وام</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit_description_{{ trans[0] }}" class="form-label">توضیحات:</label>
+                                            <input type="text" class="form-control" id="edit_description_{{ trans[0] }}" name="description" value="{{ trans[5] }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="edit_tracking_code_{{ trans[0] }}" class="form-label">کد رهگیری:</label>
+                                            <input type="number" class="form-control" id="edit_tracking_code_{{ trans[0] }}" name="tracking_code" value="{{ trans[6] }}" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">ذخیره</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
+        </div>
+        <form method="POST" action="{{ url_for('admin_add_transaction') }}">
+            <label for="member_name">نام عضو:</label>
+            <select id="member_name" name="member_name" required>
+                {% for name in member_names %}
+                    <option value="{{ name }}">{{ name }}</option>
+                {% endfor %}
+            </select>
+            <label for="trans_type">نوع تراکنش:</label>
+            <select id="trans_type" name="trans_type" required>
+                <option value="initial">سرمایه اولیه</option>
+                <option value="membership">عضویت ماهانه</option>
+                <option value="installment">قسط وام</option>
+            </select>
+            <label for="amount">مبلغ (تومان):</label>
+            <input type="number" id="amount" name="amount" required>
+            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
+            <input type="text" id="date" name="date" required>
+            <label for="description">توضیحات:</label>
+            <input type="text" id="description" name="description">
+            <label for="tracking_code">کد رهگیری:</label>
+            <input type="number" id="tracking_code" name="tracking_code" required>
+            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
+        </form>
+        <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // مرتب‌سازی
+        document.querySelectorAll('th').forEach(header => {
+            header.addEventListener('click', () => {
+                const table = document.getElementById('transactionsTable');
+                const headerIndex = Array.from(header.parentElement.children).indexOf(header);
+                const isAscending = header.classList.contains('asc');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                rows.sort((a, b) => {
+                    const aValue = a.cells[headerIndex].textContent.trim();
+                    const bValue = b.cells[headerIndex].textContent.trim();
+                    const numA = isNaN(aValue) ? aValue : parseFloat(aValue.replace(/[^\d.-]/g, ''));
+                    const numB = isNaN(bValue) ? bValue : parseFloat(bValue.replace(/[^\d.-]/g, ''));
+                    return isAscending ? (numA > numB ? 1 : -1) : (numA < numB ? 1 : -1);
+                });
+
+                document.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+                header.classList.add(isAscending ? 'desc' : 'asc');
+
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+
+        // جستجو
+        const searchInputs = {
+            'searchId': 0,
+            'searchName': 1,
+            'searchDate': 2,
+            'searchAmount': 3,
+            'searchType': 4,
+            'searchDesc': 5,
+            'searchCode': 6
+        };
+
+        Object.keys(searchInputs).forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                const table = document.getElementById('transactionsTable');
+                const rows = table.querySelectorAll('tbody tr');
+                const searchValues = {};
+                Object.keys(searchInputs).forEach(key => {
+                    searchValues[searchInputs[key]] = document.getElementById(key).value.toLowerCase();
+                });
+
+                rows.forEach(row => {
+                    let match = true;
+                    row.querySelectorAll('td').forEach((cell, index) => {
+                        if (searchValues[index] && !cell.textContent.toLowerCase().includes(searchValues[index])) {
+                            match = false;
+                        }
+                    });
+                    row.style.display = match ? '' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
