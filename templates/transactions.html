@@ -4,43 +4,76 @@
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f5f5f5;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #4A704A;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100%;
+        }
+        .sidebar a {
+            display: block;
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .sidebar a:hover {
+            background-color: #3D5C3D;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+            flex-grow: 1;
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
-        .search { margin-bottom: 10px; }
-        .summary { margin-top: 20px; font-weight: bold; }
+        .summary { margin-top: 20px; font-weight: bold; color: #333; }
+        .button { margin-top: 10px; padding: 5px 10px; }
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
-        <h1>لیست تمام تراکنش‌ها</h1>
-        <div class="search">
-            <input type="text" id="searchName" placeholder="جستجوی نام" onkeyup="searchTable(0)">
-            <input type="text" id="searchAmount" placeholder="جستجوی مبلغ" onkeyup="searchTable(1)">
-            <input type="text" id="searchType" placeholder="جستجوی نوع واریز" onkeyup="searchTable(2)">
-            <input type="text" id="searchDate" placeholder="جستجوی تاریخ" onkeyup="searchTable(3)">
-            <input type="text" id="searchCode" placeholder="جستجوی کد رهگیری" onkeyup="searchTable(4)">
-        </div>
-        <table id="transactionsTable">
+    <div class="sidebar">
+        <a href="{{ url_for('admin_panel') }}">خانه</a>
+        <a href="{{ url_for('members') }}">لیست اعضا</a>
+        <a href="{{ url_for('transactions') }}">تراکنش‌ها</a>
+        <a href="{{ url_for('logout') }}">خروج</a>
+    </div>
+    <div class="content">
+        <h1>تراکنش‌ها</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p style="color: {% if 'error' in message %}red{% else %}green{% endif %};">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <table>
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">نام</th>
-                    <th onclick="sortTable(1)">مبلغ واریز (تومان)</th>
-                    <th onclick="sortTable(2)">نوع واریز</th>
-                    <th onclick="sortTable(3)">تاریخ واریز (شمسی)</th>
-                    <th onclick="sortTable(4)">کد رهگیری</th>
+                    <th>شناسه</th>
+                    <th>نام</th>
+                    <th>تاریخ</th>
+                    <th>مبلغ (تومان)</th>
+                    <th>نوع</th>
+                    <th>توضیحات</th>
+                    <th>کد رهگیری</th>
                 </tr>
             </thead>
             <tbody>
                 {% for trans in transactions %}
                     <tr>
+                        <td>{{ trans[0] }}</td>
                         <td>{{ trans[1] }}</td>
+                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[3] | format_number }}</td>
                         <td>
                             {% if trans[4] == 'initial' %}سرمایه اولیه
@@ -48,76 +81,37 @@
                             {% elif trans[4] == 'installment' %}قسط وام
                             {% endif %}
                         </td>
-                        <td>{{ trans[2] | gregorian_to_shamsi }}</td>
+                        <td>{{ trans[5] }}</td>
                         <td>{{ trans[6] }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
-        <script>
-            function sortTable(n) {
-                var table = document.getElementById("transactionsTable");
-                var rows, switching, i, x, y, shouldSwitch, dir = "asc";
-                switching = true;
-                while (switching) {
-                    switching = false;
-                    rows = table.rows;
-                    for (i = 1; i < (rows.length - 1); i++) {
-                        shouldSwitch = false;
-                        x = rows[i].getElementsByTagName("TD")[n];
-                        y = rows[i + 1].getElementsByTagName("TD")[n];
-                        if (dir == "asc") {
-                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir == "desc") {
-                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (shouldSwitch) {
-                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                        switching = true;
-                    } else {
-                        if (switchcount == 0 && dir == "asc") {
-                            dir = "desc";
-                            switching = true;
-                        }
-                    }
-                }
-            }
-
-            function searchTable(column) {
-                var input, filter, table, tr, td, i, txtValue;
-                input = [document.getElementById("searchName"), document.getElementById("searchAmount"), document.getElementById("searchType"), document.getElementById("searchDate"), document.getElementById("searchCode")];
-                filter = input[column].value.toLowerCase();
-                table = document.getElementById("transactionsTable");
-                tr = table.getElementsByTagName("tr");
-                for (i = 1; i < tr.length; i++) {
-                    td = tr[i].getElementsByTagName("td")[column];
-                    if (td) {
-                        txtValue = td.textContent || td.innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            tr[i].style.display = "";
-                        } else {
-                            tr[i].style.display = "none";
-                        }
-                    }
-                }
-            }
-        </script>
         <div class="summary">
             <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
             <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
             <p>جمع کل: {{ total | format_number }} تومان</p>
         </div>
-        <a href="/admin">بازگشت به پنل ادمین</a>
+        <form method="POST" action="{{ url_for('admin_add_transaction') }}">
+            <label for="member_name">نام عضو:</label>
+            <input type="text" id="member_name" name="member_name" required>
+            <label for="trans_type">نوع تراکنش:</label>
+            <select id="trans_type" name="trans_type" required>
+                <option value="initial">سرمایه اولیه</option>
+                <option value="membership">عضویت ماهانه</option>
+                <option value="installment">قسط وام</option>
+            </select>
+            <label for="amount">مبلغ (تومان):</label>
+            <input type="number" id="amount" name="amount" required>
+            <label for="date">تاریخ (شمسی - YYYY-MM-DD):</label>
+            <input type="text" id="date" name="date" required>
+            <label for="description">توضیحات:</label>
+            <input type="text" id="description" name="description">
+            <label for="tracking_code">کد رهگیری:</label>
+            <input type="number" id="tracking_code" name="tracking_code" required>
+            <input type="submit" value="اضافه کردن تراکنش جدید" class="button">
+        </form>
+        <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
     </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
 </body>
 </html>
