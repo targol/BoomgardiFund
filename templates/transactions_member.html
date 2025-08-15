@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { cursor: pointer; }
+        .summary { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        <h1>تراکنش‌های {{ member_name }}</h1>
+        <table id="transactionsTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">شناسه</th>
+                    <th onclick="sortTable(1)">تاریخ واریز (شمسی)</th>
+                    <th onclick="sortTable(2)">مبلغ واریز (تومان)</th>
+                    <th onclick="sortTable(3)">نوع واریز</th>
+                    <th onclick="sortTable(4)">توضیح</th>
+                    <th onclick="sortTable(5)">کد رهگیری</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trans in transactions %}
+                    <tr>
+                        <td>{{ trans[0] }}</td>
+                        <td>{{ trans[1] | gregorian_to_shamsi }}</td>
+                        <td>{{ trans[2] | format_number }}</td>
+                        <td>{{ trans[3] }}</td>
+                        <td>{{ trans[4] }}</td>
+                        <td>{{ trans[5] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <script>
+            function sortTable(n) {
+                var table = document.getElementById("transactionsTable");
+                var rows, switching, i, x, y, shouldSwitch, dir = "asc";
+                switching = true;
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("TD")[n];
+                        y = rows[i + 1].getElementsByTagName("TD")[n];
+                        if (dir == "asc") {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir == "desc") {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                    } else {
+                        if (switchcount == 0 && dir == "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
+                }
+            }
+        </script>
+        <div class="summary">
+            <p>جمع کل سرمایه اولیه: {{ initial_total | format_number }} تومان</p>
+            <p>جمع کل عضویت‌های ماهانه: {{ membership_total | format_number }} تومان</p>
+            <p>جمع کل: {{ total | format_number }} تومان</p>
+        </div>
+        <a href="/admin">بازگشت به پنل ادمین</a>
+        <a href="/members">بازگشت به لیست اعضا</a>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
