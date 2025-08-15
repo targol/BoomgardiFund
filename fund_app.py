@@ -131,7 +131,7 @@ BASE_HTML = '''
 </head>
 <body>
     <header>
-        <img src="logo.png" alt="لوگو صندوق" width="200">
+        <img src="/logo.png" alt="لوگو صندوق" width="200">
     </header>
     <div class="container">
         %s
@@ -294,4 +294,11 @@ def admin_add_transaction():
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
 
-@app.route('/
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))  # پورت رو با لگ‌ها تنظیم کردم
+    app.run(host='0.0.0.0', port=port, debug=True)
