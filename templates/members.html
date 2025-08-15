@@ -26,22 +26,29 @@
         <div class="search">
             <input type="text" id="searchName" placeholder="جستجوی نام" onkeyup="searchTable(0)">
             <input type="text" id="searchJoinDate" placeholder="جستجوی تاریخ عضویت" onkeyup="searchTable(1)">
-            <input type="text" id="searchCapital" placeholder="جستجوی سرمایه اولیه" onkeyup="searchTable(2)">
+            <input type="text" id="searchInitial" placeholder="جستجوی مجموع سرمایه" onkeyup="searchTable(2)">
+            <input type="text" id="searchMembership" placeholder="جستجوی مجموع حق عضویت" onkeyup="searchTable(3)">
+            <input type="text" id="searchPoints" placeholder="جستجوی مجموع امتیاز" onkeyup="searchTable(4)">
         </div>
         <table id="membersTable">
             <thead>
                 <tr>
                     <th onclick="sortTable(0)">نام</th>
                     <th onclick="sortTable(1)">تاریخ عضویت (شمسی)</th>
-                    <th onclick="sortTable(2)">سرمایه اولیه (تومان)</th>
+                    <th onclick="sortTable(2)">مجموع سرمایه (تومان)</th>
+                    <th onclick="sortTable(3)">مجموع حق عضویت (تومان)</th>
+                    <th onclick="sortTable(4)">مجموع امتیاز</th>
                 </tr>
             </thead>
             <tbody>
                 {% for member in members %}
+                    {% set total_initial, total_membership = member.calculate_totals() %}
                     <tr>
                         <td><a href="{{ url_for('transactions_member', member_name=member.name) }}" class="member-link">{{ member.name }}</a></td>
                         <td>{{ member.join_date | gregorian_to_shamsi }}</td>
-                        <td>{{ member.initial_capital | format_number }}</td>
+                        <td>{{ total_initial | format_number }}</td>
+                        <td>{{ total_membership | format_number }}</td>
+                        <td>{{ member.points | format_number }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -88,7 +95,7 @@
 
             function searchTable(column) {
                 var input, filter, table, tr, td, i, txtValue;
-                input = [document.getElementById("searchName"), document.getElementById("searchJoinDate"), document.getElementById("searchCapital")];
+                input = [document.getElementById("searchName"), document.getElementById("searchJoinDate"), document.getElementById("searchInitial"), document.getElementById("searchMembership"), document.getElementById("searchPoints")];
                 filter = input[column].value.toLowerCase();
                 table = document.getElementById("membersTable");
                 tr = table.getElementsByTagName("tr");
