@@ -70,13 +70,26 @@ class Member:
     def update_daily_balance(self, date_str):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        daily_points = self.current_balance // 50000
-        total_points = self.points + daily_points
+        # محاسبه موجودی تا تاریخ مشخص
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type IN ('initial', 'membership')",
+                  (self.id, date_str))
+        total_in = c.fetchone()[0] or 0
+        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type = 'installment'",
+                  (self.id, date_str))
+        total_out = c.fetchone()[0] or 0
+        balance = total_in - total_out
+        daily_points = balance // 50000
+        # به‌روزرسانی مجموع امتیازها
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT COALESCE(SUM(daily_points), 0) FROM daily_balances WHERE member_id = ? AND date < ?", (self.id, date_str))
+        prev_points = c.fetchone()[0]
+        total_points = prev_points + daily_points
         try:
             c.execute("INSERT OR REPLACE INTO daily_balances (member_id, date, balance, daily_points, total_points) VALUES (?, ?, ?, ?, ?)",
-                      (self.id, date_str, self.current_balance, daily_points, total_points))
+                      (self.id, date_str, balance, daily_points, total_points))
             conn.commit()
-            self.points = total_points
+            self.points = total_points  # به‌روزرسانی امتیاز کل توی دیتابیس
             self.save()
         except sqlite3.Error as e:
             print(f"خطا در آپدیت تاریخچه: {e}")
@@ -87,7 +100,20 @@ class Member:
     def get_daily_balances(self):
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        c.execute("SELECT date, balance, daily_points, total_points FROM daily_balances WHERE member_id = ? ORDER BY date ASC", (self.id,))
+        # گرفتن اولین تاریخ تراکنش
+        c.execute("SELECT MIN(date) FROM transactions WHERE member_id = ?", (self.id,))
+        first_transaction_date = c.fetchone()[0]
+        start_date = max(datetime.strptime(self.join_date, "%Y-%m-%d"), 
+                        datetime.strptime(first_transaction_date or self.join_date, "%Y-%m-%d") if first_transaction_date else datetime.strptime(self.join_date, "%Y-%m-%d"))
+        current_date = start_date
+        end_date = datetime.now()
+        details = []
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            self.update_daily_balance(date_str)  # اطمینان از به‌روزرسانی روزانه
+            current_date += timedelta(days=1)
+        # گرفتن داده‌ها از دیتابیس و مرتب‌سازی برعکس (از امروز به عقب)
+        c.execute("SELECT date, balance, daily_points, total_points FROM daily_balances WHERE member_id = ? ORDER BY date DESC", (self.id,))
         rows = c.fetchall()
         conn.close()
         return [(gregorian_to_shamsi(row[0]), row[1], row[2], row[3]) for row in rows]
@@ -264,8 +290,8 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        # به‌روزرسانی تاریخچه از تاریخ عضویت یا تاریخ تراکنش تا امروز
-        start_date = max(datetime.strptime(member.join_date, "%Y-%m-%d"), datetime.strptime(date_gregorian, "%Y-%m-%d"))
+        # به‌روزرسانی تاریخچه از اولین تراکنش یا عضویت تا امروز
+        start_date = datetime.strptime(date_gregorian, "%Y-%m-%d")
         current_date = start_date
         end_date = datetime.now()
         while current_date <= end_date:
@@ -304,30 +330,7 @@ def details(member_name):
     member = Member.load_by_name(member_name)
     if not member:
         return "عضو یافت نشد!"
-    # محاسبه تاریخچه کامل از تاریخ عضویت تا امروز
-    start_date = datetime.strptime(member.join_date, "%Y-%m-%d")
-    current_date = start_date
-    end_date = datetime.now()
-    details = []
-    total_points = 0
-    while current_date <= end_date:
-        date_str = current_date.strftime("%Y-%m-%d")
-        shamsi_date = gregorian_to_shamsi(date_str)
-        # محاسبه موجودی بر اساس تراکنش‌ها تا آن تاریخ
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type IN ('initial', 'membership')",
-                  (member.id, date_str))
-        total_in = c.fetchone()[0] or 0
-        c.execute("SELECT SUM(amount) FROM transactions WHERE member_id = ? AND date <= ? AND type = 'installment'",
-                  (member.id, date_str))
-        total_out = c.fetchone()[0] or 0
-        conn.close()
-        balance = total_in - total_out
-        daily_points = balance // 50000
-        total_points += daily_points
-        details.append((shamsi_date, balance, daily_points, total_points))
-        current_date += timedelta(days=1)
+    details = member.get_daily_balances()
     return render_template('details.html', details=details, member_name=member_name)
 
 @app.route('/members')
