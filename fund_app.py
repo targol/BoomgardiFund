@@ -107,6 +107,12 @@ def get_all_transactions():
     conn.close()
     return rows
 
+# تبدیل تاریخ شمسی به میلادی
+def shamsi_to_gregorian(shamsi_date):
+    year, month, day = map(int, shamsi_date.split('-'))
+    jd = jdate(year, month, day)
+    return jd.togregorian().strftime("%Y-%m-%d")
+
 # تبدیل تاریخ میلادی به شمسی
 def gregorian_to_shamsi(date_str):
     if date_str:
@@ -123,6 +129,7 @@ def format_number(number):
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = secrets.token_hex(16)
 app.jinja_env.filters['format_number'] = format_number
+app.jinja_env.filters['gregorian_to_shamsi'] = gregorian_to_shamsi
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
