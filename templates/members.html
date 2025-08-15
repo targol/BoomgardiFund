@@ -4,19 +4,49 @@
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
-        header { background-color: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f5f5f5;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #4A704A;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100%;
+        }
+        .sidebar a {
+            display: block;
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .sidebar a:hover {
+            background-color: #3D5C3D;
+        }
+        .content {
+            margin-left: 220px;
+            padding: 20px;
+            flex-grow: 1;
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; }
+        .button { margin-top: 10px; padding: 5px 10px; }
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
-    </header>
-    <div class="container">
+    <div class="sidebar">
+        <a href="{{ url_for('admin_panel') }}">خانه</a>
+        <a href="{{ url_for('members') }}">لیست اعضا</a>
+        <a href="{{ url_for('transactions') }}">تراکنش‌ها</a>
+        <a href="{{ url_for('logout') }}">خروج</a>
+    </div>
+    <div class="content">
         <h1>لیست اعضا</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -48,10 +78,18 @@
                 {% endfor %}
             </tbody>
         </table>
-        <a href="{{ url_for('admin_panel') }}">بازگشت به پنل ادمین</a>
+        <form method="POST" action="{{ url_for('admin_add_member') }}">
+            <label for="name">نام:</label>
+            <input type="text" id="name" name="name" required>
+            <label for="join_date">تاریخ عضویت (شمسی - YYYY-MM-DD):</label>
+            <input type="text" id="join_date" name="join_date" required>
+            <label for="username">یوزرنیم:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="password">پسورد:</label>
+            <input type="password" id="password" name="password" required>
+            <input type="submit" value="اضافه کردن عضو جدید" class="button">
+        </form>
+        <a href="{{ url_for('admin_panel') }}" class="button">بازگشت به خانه</a>
     </div>
-    <footer>
-        اطلاعات فوتر: تماس با ما - نسخه 1.0
-    </footer>
 </body>
 </html>
