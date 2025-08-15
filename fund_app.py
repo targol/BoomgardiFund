@@ -191,7 +191,7 @@ def get_transactions_by_member(member_name):
         return []
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT t.id, t.date, t.amount, type, t.description, t.tracking_code FROM transactions t WHERE t.member_id = ? ORDER BY t.date ASC", (member.id,))
+    c.execute("SELECT t.id, t.date, t.amount, t.type, t.description, t.tracking_code FROM transactions t WHERE t.member_id = ? ORDER BY t.date ASC", (member.id,))
     rows = c.fetchall()
     conn.close()
     return rows
@@ -225,6 +225,11 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        # ورود ادمین با admin/admin
+        if username == 'admin' and password == 'admin':
+            session['role'] = 'admin'
+            return redirect(url_for('admin_panel'))
+        # ورود کاربران عادی
         member = Member.load_by_username(username)
         if member and member.password == password:
             session['role'] = 'member'
