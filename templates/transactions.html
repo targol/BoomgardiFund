@@ -93,9 +93,16 @@
             </thead>
             <tbody>
                 {% for trans in transactions %}
+                    {% set member = members|selectattr('name', 'equalto', trans[1])|first %}
                     <tr>
                         <td>{{ trans[0] }}</td>
-                        <td><a href="{{ url_for('user_dashboard', username=(members|selectattr('name', 'equalto', trans[1])|first.username if members|selectattr('name', 'equalto', trans[1])|first else '') }}" class="member-link">{{ trans[1] }}</a></td>
+                        <td>
+                            {% if member %}
+                                <a href="{{ url_for('user_dashboard', username=member.username) }}" class="member-link">{{ trans[1] }}</a>
+                            {% else %}
+                                {{ trans[1] }}
+                            {% endif %}
+                        </td>
                         <td>{{ trans[2] | gregorian_to_shamsi }}</td>
                         <td>{{ trans[3] | format_number }}</td>
                         <td>
