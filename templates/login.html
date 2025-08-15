@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        form { margin-bottom: 20px; }
+        .message { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        <h1>لاگین</h1>
+        {% for message in get_flashed_messages(with_categories=true) %}
+            {% if message[0] == 'error' %}<p class="error">{{ message[1] }}</p>{% endif %}
+        {% endfor %}
+        <form method="post">
+            نام کاربری: <input type="text" name="username"><br>
+            پسورد: <input type="password" name="password"><br>
+            <input type="submit" value="ورود">
+        </form>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>

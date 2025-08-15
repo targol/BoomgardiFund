@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; font-size: 18px; text-align: center; margin: 0; padding: 0; }
+        header { background-color: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+        footer { background-color: #f0f0f0; padding: 10px; position: fixed; bottom: 0; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { cursor: pointer; }
+        .pagination { margin-top: 10px; }
+        .pagination a { margin: 0 5px; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="لوگو صندوق" width="200">
+    </header>
+    <div class="container">
+        <h1>لیست تمام اعضا</h1>
+        <table id="membersTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">نام</th>
+                    <th onclick="sortTable(1)">تاریخ عضویت</th>
+                    <th onclick="sortTable(2)">سرمایه اولیه</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                    <tr>
+                        <td>{{ member.name }}</td>
+                        <td>{{ member.join_date }}</td>
+                        <td>{{ member.initial_capital }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="pagination">
+            <a href="#" onclick="showPage(1)">1</a>
+            <a href="#" onclick="showPage(2)">2</a>
+        </div>
+        <script>
+            function sortTable(n) {
+                var table = document.getElementById("membersTable");
+                var rows, switching, i, x, y, shouldSwitch, dir = "asc";
+                switching = true;
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("TD")[n];
+                        y = rows[i + 1].getElementsByTagName("TD")[n];
+                        if (dir == "asc") {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir == "desc") {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                    } else {
+                        if (switchcount == 0 && dir == "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
+                }
+            }
+
+            function showPage(page) {
+                var rows = document.getElementById("membersTable").rows;
+                for (var i = 1; i < rows.length; i++) {
+                    rows[i].style.display = "none";
+                }
+                var start = (page - 1) * 10 + 1;
+                var end = start + 9;
+                for (var i = start; i <= end && i < rows.length; i++) {
+                    rows[i].style.display = "";
+                }
+            }
+            showPage(1);
+        </script>
+        <a href="/admin">بازگشت به پنل ادمین</a>
+    </div>
+    <footer>
+        اطلاعات فوتر: تماس با ما - نسخه 1.0
+    </footer>
+</body>
+</html>
