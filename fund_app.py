@@ -1,23 +1,32 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from flask import Flask, request, render_template, redirect, url_for, session, flash, get_flashed_messages
 import secrets
 from jdatetime import date as jdate
 
 # تنظیم دیتابیس
-DB_FILE = 'fund.db'
+DB_FILE = os.path.join(os.path.dirname(__file__), 'fund.db')
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS members
-                 (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
-                  initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS transactions
-                 (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER)''')
-    conn.commit()
-    conn.close()
+    try:
+        c.execute('''CREATE TABLE IF NOT EXISTS members
+                     (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
+                      initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS transactions
+                     (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER UNIQUE,
+                      FOREIGN KEY (member_id) REFERENCES members(id))''')
+        c.execute('''CREATE TABLE IF NOT EXISTS daily_balances
+                     (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, balance INTEGER, daily_points INTEGER, total_points INTEGER,
+                      FOREIGN KEY (member_id) REFERENCES members(id), UNIQUE (member_id, date))''')
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"خطا در ساخت دیتابیس: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 init_db()
 
@@ -58,13 +67,30 @@ class Member:
         conn.commit()
         conn.close()
 
-    def calculate_points(self, current_date_str):
-        current_date = datetime.strptime(current_date_str, "%Y-%m-%d")
-        days_passed = (current_date - datetime.strptime(self.join_date, "%Y-%m-%d")).days
+    def update_daily_balance(self, date_str):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
         daily_points = self.current_balance // 50000
-        self.points = daily_points * days_passed
-        self.save()
-        return self.points
+        total_points = self.points + daily_points
+        try:
+            c.execute("INSERT OR REPLACE INTO daily_balances (member_id, date, balance, daily_points, total_points) VALUES (?, ?, ?, ?, ?)",
+                      (self.id, date_str, self.current_balance, daily_points, total_points))
+            conn.commit()
+            self.points = total_points
+            self.save()
+        except sqlite3.Error as e:
+            print(f"خطا در آپدیت تاریخچه: {e}")
+            conn.rollback()
+        finally:
+            conn.close()
+
+    def get_daily_balances(self):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT date, balance, daily_points, total_points FROM daily_balances WHERE member_id = ? ORDER BY date ASC", (self.id,))
+        rows = c.fetchall()
+        conn.close()
+        return [(gregorian_to_shamsi(row[0]), row[1], row[2], row[3]) for row in rows]
 
 def add_member(name, join_date_gregorian):
     conn = sqlite3.connect(DB_FILE)
@@ -82,9 +108,12 @@ def add_member(name, join_date_gregorian):
 def add_transaction(member_id, date_gregorian, amount, trans_type, description, tracking_code):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT INTO transactions (member_id, date, amount, type, description, tracking_code) VALUES (?, ?, ?, ?, ?, ?)",
-              (member_id, date_gregorian, amount, trans_type, description, tracking_code))
-    conn.commit()
+    try:
+        c.execute("INSERT INTO transactions (member_id, date, amount, type, description, tracking_code) VALUES (?, ?, ?, ?, ?, ?)",
+                  (member_id, date_gregorian, amount, trans_type, description, tracking_code))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        raise ValueError("کد رهگیری تکراری است!")
     conn.close()
 
 def update_balance(member_id, amount, trans_type):
@@ -165,9 +194,8 @@ def status():
     member = Member.load_by_name(session['username'])
     if member:
         current_date = datetime.now().strftime("%Y-%m-%d")
-        points = member.calculate_points(current_date)
-        fund_balance = sum(m.current_balance for m in Member.load_all())
-        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(points), fund_balance=format_number(fund_balance))
+        member.update_daily_balance(current_date)
+        return render_template('status.html', name=member.name, balance=format_number(member.current_balance), points=format_number(member.points), fund_balance=format_number(sum(m.current_balance for m in Member.load_all())))
     return "عضو یافت نشد!"
 
 @app.route('/admin')
@@ -205,7 +233,7 @@ def admin_add_transaction():
     trans_type = request.form['trans_type']
     try:
         amount = int(request.form['amount'])
-        tracking_code = int(request.form['tracking_code'])  # دریافت کد رهگیری از فرم
+        tracking_code = int(request.form['tracking_code'])
     except ValueError:
         flash('مبلغ یا کد رهگیری نامعتبر است!', 'error')
         return redirect(url_for('admin_panel'))
@@ -225,9 +253,10 @@ def admin_add_transaction():
         date_gregorian = shamsi_to_gregorian(date_shamsi)
         add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
+        member.update_daily_balance(date_gregorian)  # آپدیت تاریخچه با تاریخ تراکنش
         flash('تراکنش با کد رهگیری ثبت شد!', 'message')
-    except ValueError:
-        flash('تاریخ شمسی نامعتبر!', 'error')
+    except ValueError as e:
+        flash(str(e), 'error')
     return redirect(url_for('admin_panel'))
 
 @app.route('/transactions')
@@ -235,7 +264,6 @@ def transactions():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
     transactions = get_all_transactions()
-    # محاسبه جمع کل سرمایه اولیه و عضویت‌های ماهانه
     initial_total = sum(t[3] for t in transactions if t[4] == 'initial')
     membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
     total = initial_total + membership_total
@@ -251,6 +279,16 @@ def transactions_member(member_name):
     membership_total = sum(t[2] for t in transactions if t[3] == 'membership')
     total = initial_total + membership_total
     return render_template('transactions_member.html', transactions=transactions, member_name=member_name, initial_total=initial_total, membership_total=membership_total, total=total)
+
+@app.route('/details/<member_name>')
+def details(member_name):
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+    member = Member.load_by_name(member_name)
+    if not member:
+        return "عضو یافت نشد!"
+    details = member.get_daily_balances()
+    return render_template('details.html', details=details, member_name=member_name)
 
 @app.route('/members')
 def members():
