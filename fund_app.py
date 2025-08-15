@@ -15,7 +15,7 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT UNIQUE, join_date TEXT, 
                   initial_capital INTEGER DEFAULT 0, current_balance INTEGER DEFAULT 0, points INTEGER DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS transactions
-                 (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT)''')
+                 (id INTEGER PRIMARY KEY, member_id INTEGER, date TEXT, amount INTEGER, type TEXT, description TEXT, tracking_code INTEGER)''')
     conn.commit()
     conn.close()
 
@@ -79,11 +79,11 @@ def add_member(name, join_date_gregorian):
     finally:
         conn.close()
 
-def add_transaction(member_id, date_gregorian, amount, trans_type, description):
+def add_transaction(member_id, date_gregorian, amount, trans_type, description, tracking_code):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT INTO transactions (member_id, date, amount, type, description) VALUES (?, ?, ?, ?, ?)",
-              (member_id, date_gregorian, amount, trans_type, description))
+    c.execute("INSERT INTO transactions (member_id, date, amount, type, description, tracking_code) VALUES (?, ?, ?, ?, ?, ?)",
+              (member_id, date_gregorian, amount, trans_type, description, tracking_code))
     conn.commit()
     conn.close()
 
@@ -102,7 +102,18 @@ def update_balance(member_id, amount, trans_type):
 def get_all_transactions():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT t.id, m.name, t.date, t.amount, t.type, t.description FROM transactions t JOIN members m ON t.member_id = m.id ORDER BY t.date ASC")
+    c.execute("SELECT t.id, m.name, t.date, t.amount, t.type, t.description, t.tracking_code FROM transactions t JOIN members m ON t.member_id = m.id ORDER BY t.date ASC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def get_transactions_by_member(member_name):
+    member = Member.load_by_name(member_name)
+    if not member:
+        return []
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT t.id, t.date, t.amount, t.type, t.description, t.tracking_code FROM transactions t WHERE t.member_id = ? ORDER BY t.date ASC", (member.id,))
     rows = c.fetchall()
     conn.close()
     return rows
@@ -194,8 +205,9 @@ def admin_add_transaction():
     trans_type = request.form['trans_type']
     try:
         amount = int(request.form['amount'])
+        tracking_code = int(request.form['tracking_code'])  # دریافت کد رهگیری از فرم
     except ValueError:
-        flash('مبلغ نامعتبر!', 'error')
+        flash('مبلغ یا کد رهگیری نامعتبر است!', 'error')
         return redirect(url_for('admin_panel'))
     date_shamsi = request.form['date']
     description = request.form['description']
@@ -211,9 +223,9 @@ def admin_add_transaction():
 
     try:
         date_gregorian = shamsi_to_gregorian(date_shamsi)
-        add_transaction(member.id, date_gregorian, amount, trans_type, description)
+        add_transaction(member.id, date_gregorian, amount, trans_type, description, tracking_code)
         update_balance(member.id, amount, trans_type)
-        flash('تراکنش ثبت شد!', 'message')
+        flash('تراکنش با کد رهگیری ثبت شد!', 'message')
     except ValueError:
         flash('تاریخ شمسی نامعتبر!', 'error')
     return redirect(url_for('admin_panel'))
@@ -228,6 +240,17 @@ def transactions():
     membership_total = sum(t[3] for t in transactions if t[4] == 'membership')
     total = initial_total + membership_total
     return render_template('transactions.html', transactions=transactions, initial_total=initial_total, membership_total=membership_total, total=total)
+
+@app.route('/transactions/<member_name>')
+def transactions_member(member_name):
+    if session.get('role') != 'admin':
+        return redirect(url_for('login'))
+    transactions = get_transactions_by_member(member_name)
+    member = Member.load_by_name(member_name)
+    initial_total = sum(t[2] for t in transactions if t[3] == 'initial')
+    membership_total = sum(t[2] for t in transactions if t[3] == 'membership')
+    total = initial_total + membership_total
+    return render_template('transactions_member.html', transactions=transactions, member_name=member_name, initial_total=initial_total, membership_total=membership_total, total=total)
 
 @app.route('/members')
 def members():
