@@ -71,14 +71,18 @@
                 </tr>
             </thead>
             <tbody>
-                {% for detail in details %}
-                    <tr>
-                        <td>{{ detail[0] }}</td>
-                        <td>{{ detail[1] | format_number }}</td>
-                        <td>{{ detail[2] | format_number }}</td>
-                        <td>{{ detail[3] | format_number }}</td>
-                    </tr>
-                {% endfor %}
+                {% if details %}
+                    {% for detail in details %}
+                        <tr>
+                            <td>{{ detail[0] }}</td>
+                            <td>{{ detail[1] | format_number }}</td>
+                            <td>{{ detail[2] | format_number }}</td>
+                            <td>{{ detail[3] | format_number }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="4">جزییات امتیازی موجود نیست.</td></tr>
+                {% endif %}
             </tbody>
         </table>
 
