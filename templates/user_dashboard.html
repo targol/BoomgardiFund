@@ -48,8 +48,8 @@
 </head>
 <body>
     <div class="sidebar">
-        <a href="{{ url_for('user_dashboard', member_name=member.name) }}">خانه</a>
-        <a href="{{ url_for('user_transactions', member_name=member.name) }}">لیست تراکنش‌ها</a>
+        <a href="{{ url_for('user_dashboard', username=member.username) }}">خانه</a>
+        <a href="{{ url_for('user_transactions', username=member.username) }}">لیست تراکنش‌ها</a>
         <a href="{{ url_for('logout') }}">خروج</a>
     </div>
     <div class="content">
